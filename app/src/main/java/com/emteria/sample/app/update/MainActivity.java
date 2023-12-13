@@ -55,6 +55,19 @@ public class MainActivity extends AppCompatActivity
             {
                 LinearLayout view = findViewById(R.id.sscrolLayout);
                 view.removeAllViews();
+                PackageTask t = new PackageTask(getApplicationContext(), "emteria");
+                t.execute(mPackageHandler);
+            }
+        });
+
+        Button getS3Packages = findViewById(R.id.getPackagesS3);
+        getS3Packages.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                LinearLayout view = findViewById(R.id.sscrolLayout);
+                view.removeAllViews();
                 PackageTask t = new PackageTask(getApplicationContext());
                 t.execute(mPackageHandler);
             }

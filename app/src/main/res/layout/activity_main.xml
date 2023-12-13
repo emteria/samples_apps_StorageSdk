@@ -20,7 +20,13 @@
                 android:id="@+id/getPackages"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:text="Get Available Packages" />
+                android:text="Get Packages (Fdroid)" />
+
+            <Button
+                android:id="@+id/getPackagesS3"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Get Packages (S3)" />
 
         </LinearLayout>
 
