@@ -13,8 +13,6 @@ android {
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -36,7 +34,6 @@ android {
 }
 
 dependencies {
-
     implementation(files("src/main/libs/emteria-storage-sdk.jar"))
 
     implementation(libs.appcompat)
@@ -44,7 +41,4 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.espresso.core)
 }
