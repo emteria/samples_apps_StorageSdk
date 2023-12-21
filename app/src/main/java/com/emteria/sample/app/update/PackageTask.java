@@ -8,8 +8,8 @@ import com.emteria.storage.contract.manager.PackageListManager;
 
 public class PackageTask extends AsyncTask<PackageListManager, Void, Void>
 {
-    Context mContext;
-    String mRepoName;
+    private final Context mContext;
+    private final String mRepoName;
 
     public PackageTask(Context context, String repoName)
     {
@@ -27,6 +27,7 @@ public class PackageTask extends AsyncTask<PackageListManager, Void, Void>
     protected Void doInBackground(PackageListManager... packageListManagers)
     {
         Log.i("Package TASK","Started getPackages");
+
         PackageListManager mPackageHandler = packageListManagers[0];
         mPackageHandler.bind(mContext);
         if (mRepoName != null)

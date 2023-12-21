@@ -10,8 +10,8 @@ import java.util.List;
 
 public class InstallTask extends AsyncTask<PackageInstallManager, Void, Void>
 {
-    List<AppPackage> mAppPackages;
-    Context mContext;
+    private final List<AppPackage> mAppPackages;
+    private final Context mContext;
 
     public InstallTask(Context context, List<AppPackage> appPackages)
     {

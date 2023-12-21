@@ -10,8 +10,8 @@ import java.util.List;
 
 public class DownloadTask extends AsyncTask<PackageDownloadManager, Void, Void>
 {
-    List<AppPackage> mAppPackages;
-    Context mContext;
+    private final List<AppPackage> mAppPackages;
+    private final Context mContext;
 
     public DownloadTask(Context context, List<AppPackage> appPackage)
     {
