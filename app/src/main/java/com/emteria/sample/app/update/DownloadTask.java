@@ -3,8 +3,8 @@ package com.emteria.sample.app.update;
 import android.content.Context;
 import android.os.AsyncTask;
 
-import com.emteria.storage.contract.AppPackage;
-import com.emteria.storage.contract.manager.PackageDownloadManager;
+import com.emteria.storage.contract.models.AppPackage;
+import com.emteria.storage.contract.managers.PackageDownloadManager;
 
 import java.util.List;
 

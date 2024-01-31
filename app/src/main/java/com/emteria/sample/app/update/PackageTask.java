@@ -4,9 +4,9 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.emteria.storage.contract.manager.PackageListManager;
+import com.emteria.storage.contract.managers.PackageMetadataManager;
 
-public class PackageTask extends AsyncTask<PackageListManager, Void, Void>
+public class PackageTask extends AsyncTask<PackageMetadataManager, Void, Void>
 {
     private final Context mContext;
     private final String mRepoName;
@@ -24,11 +24,12 @@ public class PackageTask extends AsyncTask<PackageListManager, Void, Void>
     }
 
     @Override
-    protected Void doInBackground(PackageListManager... packageListManagers)
+    protected Void doInBackground(PackageMetadataManager... packageListManagers)
     {
         Log.i("Package TASK","Started getPackages");
 
-        PackageListManager mPackageHandler = packageListManagers[0];
+        PackageMetadataManager mPackageHandler = packageListManagers[0];
+
         mPackageHandler.bind(mContext);
         if (mRepoName != null)
         {

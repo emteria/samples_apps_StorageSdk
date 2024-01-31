@@ -3,12 +3,12 @@ package com.emteria.sample.app.update;
 import android.content.Context;
 import android.os.AsyncTask;
 
-import com.emteria.storage.contract.AppPackage;
-import com.emteria.storage.contract.manager.PackageInstallManager;
+import com.emteria.storage.contract.models.AppPackage;
+import com.emteria.storage.contract.managers.PackageInstallationManager;
 
 import java.util.List;
 
-public class InstallTask extends AsyncTask<PackageInstallManager, Void, Void>
+public class InstallTask extends AsyncTask<PackageInstallationManager, Void, Void>
 {
     private final List<AppPackage> mAppPackages;
     private final Context mContext;
@@ -20,9 +20,9 @@ public class InstallTask extends AsyncTask<PackageInstallManager, Void, Void>
     }
 
     @Override
-    protected Void doInBackground(PackageInstallManager... packageInstallManagers)
+    protected Void doInBackground(PackageInstallationManager... packageInstallManagers)
     {
-        PackageInstallManager p = packageInstallManagers[0];
+        PackageInstallationManager p = packageInstallManagers[0];
         p.bind(mContext);
         for (AppPackage app : mAppPackages)
         {
