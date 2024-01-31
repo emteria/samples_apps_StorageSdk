@@ -60,6 +60,12 @@
                 android:layout_height="wrap_content"
                 android:text="Register Device" />
 
+            <Button
+                android:id="@+id/deviceStatus"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Get Device Status" />
+
         </LinearLayout>
     </LinearLayout>
 

@@ -10,20 +10,32 @@ import com.emteria.storage.contract.managers.PackageDownloadManager;
 public class RegisterDeviceTask extends AsyncTask<DeviceRegistrationManager, Void, Void>
 {
     Context mContext;
-    String mUniversalLicense;
+    String mUniversalLicense = null;
     public RegisterDeviceTask(Context context, String universalLicense)
     {
         this.mContext = context;
         this.mUniversalLicense = universalLicense;
     }
 
+    public RegisterDeviceTask(Context context)
+    {
+        this.mContext = context;
+    }
+
     @Override
     protected Void doInBackground(DeviceRegistrationManager... arg)
     {
         DeviceRegistrationManager p = arg[0];
-        p.bind(mContext);
+        p.bindToDeviceManagement(mContext);
 
-        p.registerDevice(mUniversalLicense);
+        if(mUniversalLicense == null)
+        {
+            p.isDeviceRegistered();
+        }
+        else
+        {
+            p.registerDevice(mUniversalLicense);
+        }
         return null;
     }
 }

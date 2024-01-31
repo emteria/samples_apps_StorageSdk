@@ -30,7 +30,7 @@ public class PackageTask extends AsyncTask<PackageMetadataManager, Void, Void>
 
         PackageMetadataManager mPackageHandler = packageListManagers[0];
 
-        mPackageHandler.bind(mContext);
+        mPackageHandler.bindToAppManagement(mContext);
         if (mRepoName != null)
         {
             mPackageHandler.getPackages(mRepoName);

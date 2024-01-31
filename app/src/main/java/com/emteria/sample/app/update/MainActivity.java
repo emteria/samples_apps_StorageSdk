@@ -177,6 +177,17 @@ public class MainActivity extends AppCompatActivity
                 task.execute(mRegistrationHandler);
             }
         });
+
+        Button deviceStatus = findViewById(R.id.deviceStatus);
+        deviceStatus.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                RegisterDeviceTask task = new RegisterDeviceTask(getApplicationContext());
+                task.execute(mRegistrationHandler);
+            }
+        });
     }
 
     private class PackageHandler extends PackageMetadataManager
@@ -407,6 +418,28 @@ public class MainActivity extends AppCompatActivity
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             text.setText("Device register failed");
+
+            view.addView(text);
+        }
+
+        @Override
+        public void onDeviceRegistered()
+        {
+            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            view.removeAllViews();
+            TextView text = new TextView(getApplicationContext());
+            text.setText("Device is already registered");
+
+            view.addView(text);
+        }
+
+        @Override
+        public void onDeviceNotRegistered()
+        {
+            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            view.removeAllViews();
+            TextView text = new TextView(getApplicationContext());
+            text.setText("Device is not registered");
 
             view.addView(text);
         }

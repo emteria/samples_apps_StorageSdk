@@ -23,7 +23,7 @@ public class DownloadTask extends AsyncTask<PackageDownloadManager, Void, Void>
     protected Void doInBackground(PackageDownloadManager... packageDownloadManagers)
     {
         PackageDownloadManager p = packageDownloadManagers[0];
-        p.bind(mContext);
+        p.bindToAppManagement(mContext);
         for (AppPackage app : mAppPackages)
         {
             p.downloadPackage(app);

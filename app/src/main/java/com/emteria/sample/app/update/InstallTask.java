@@ -23,7 +23,7 @@ public class InstallTask extends AsyncTask<PackageInstallationManager, Void, Voi
     protected Void doInBackground(PackageInstallationManager... packageInstallManagers)
     {
         PackageInstallationManager p = packageInstallManagers[0];
-        p.bind(mContext);
+        p.bindToAppManagement(mContext);
         for (AppPackage app : mAppPackages)
         {
             p.installPackage(app);
