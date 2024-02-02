@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View v)
             {
-                RegisterDeviceTask task = new RegisterDeviceTask(getApplicationContext());
+                DeviceStatusTask task = new DeviceStatusTask(getApplicationContext());
                 task.execute(mRegistrationHandler);
             }
         });
@@ -401,7 +401,7 @@ public class MainActivity extends AppCompatActivity
 
 
         @Override
-        public void onSuccess(boolean b)
+        public void onRegistrationSuccess()
         {
             LinearLayout view = activity.findViewById(R.id.sscrolLayout);
             view.removeAllViews();
@@ -412,7 +412,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        public void onFailure(String s, String s1)
+        public void onRegistrationFailure(String s)
         {
             LinearLayout view = activity.findViewById(R.id.sscrolLayout);
             view.removeAllViews();

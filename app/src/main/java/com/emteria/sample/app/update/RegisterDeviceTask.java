@@ -27,15 +27,8 @@ public class RegisterDeviceTask extends AsyncTask<DeviceRegistrationManager, Voi
     {
         DeviceRegistrationManager p = arg[0];
         p.bindToDeviceManagement(mContext);
+        p.registerDevice(mUniversalLicense);
 
-        if(mUniversalLicense == null)
-        {
-            p.isDeviceRegistered();
-        }
-        else
-        {
-            p.registerDevice(mUniversalLicense);
-        }
         return null;
     }
 }
