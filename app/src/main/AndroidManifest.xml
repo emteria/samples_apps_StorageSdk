@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="com.emteria.permission.MANAGE_APP_UPDATES" />
+    <uses-permission android:name="com.emteria.permission.MANAGE_DEVICE_REGISTRATION" />
 
     <queries>
         <package android:name="com.emteria.storage" />

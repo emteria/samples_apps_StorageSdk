@@ -2,18 +2,21 @@ package com.emteria.sample.app.update;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.emteria.storage.contract.AppPackage;
-import com.emteria.storage.contract.manager.PackageDownloadManager;
-import com.emteria.storage.contract.manager.PackageInstallManager;
-import com.emteria.storage.contract.manager.PackageListManager;
+import com.emteria.storage.contract.managers.DeviceRegistrationManager;
+import com.emteria.storage.contract.models.AppPackage;
+import com.emteria.storage.contract.managers.PackageDownloadManager;
+import com.emteria.storage.contract.managers.PackageInstallationManager;
+import com.emteria.storage.contract.managers.PackageMetadataManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,10 +33,10 @@ public class MainActivity extends AppCompatActivity
 
     private int mDownloadCounter = 0;
     private int mInstallCounter = 0;
-
     private PackageHandler mPackageHandler;
     private DownloadHandler mDownloadHandler;
     private InstallHandler mInstallHandler;
+    private RegistrationHandler mRegistrationHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -46,6 +49,7 @@ public class MainActivity extends AppCompatActivity
         mPackageHandler = new PackageHandler(this);
         mInstallHandler = new InstallHandler(this);
         mDownloadHandler = new DownloadHandler(this);
+        mRegistrationHandler = new RegistrationHandler(this);
 
         getPackages.setOnClickListener(v ->
         {
@@ -156,9 +160,37 @@ public class MainActivity extends AppCompatActivity
             mInstallCounter = installablePackages.size();
             mDownloadedPackages = new ArrayList<>();
         });
+
+        Button registerDevice = findViewById(R.id.registerDevice);
+        registerDevice.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                EditText universalLicense = findViewById(R.id.universalLicense);
+                if (universalLicense.getText().toString().isEmpty())
+                {
+                    Log.d(TAG, "universal license is empty");
+                    return;
+                }
+                RegisterDeviceTask task = new RegisterDeviceTask(getApplicationContext(), universalLicense.getText().toString());
+                task.execute(mRegistrationHandler);
+            }
+        });
+
+        Button deviceStatus = findViewById(R.id.deviceStatus);
+        deviceStatus.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                DeviceStatusTask task = new DeviceStatusTask(getApplicationContext());
+                task.execute(mRegistrationHandler);
+            }
+        });
     }
 
-    private class PackageHandler extends PackageListManager
+    private class PackageHandler extends PackageMetadataManager
     {
         private static final String TAG = "ExternalUpdateSample - PackageHandler";
         private final MainActivity activity;
@@ -284,7 +316,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private class InstallHandler extends PackageInstallManager
+    private class InstallHandler extends PackageInstallationManager
     {
         private static final String TAG = "ExternalUpdateSample - InstallHandler";
         private final MainActivity activity;
@@ -354,6 +386,57 @@ public class MainActivity extends AppCompatActivity
             if (mInstallCounter == 0)
             {
                 mInstallHandler.unbind(getApplicationContext());
+            }
+        }
+    }
+
+    private class RegistrationHandler extends DeviceRegistrationManager
+    {
+        private static final String TAG = "ExternalUpdateSample - RegistrationHandler";
+        private final MainActivity activity;
+
+        private RegistrationHandler(MainActivity activity) {
+            this.activity = activity;
+        }
+
+
+        @Override
+        public void onRegistrationSuccess()
+        {
+            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            view.removeAllViews();
+            TextView text = new TextView(getApplicationContext());
+            text.setText("Device successfully registered");
+
+            view.addView(text);
+        }
+
+        @Override
+        public void onRegistrationFailure(String s)
+        {
+            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            view.removeAllViews();
+            TextView text = new TextView(getApplicationContext());
+            text.setText("Device register failed");
+
+            view.addView(text);
+        }
+
+        @Override
+        public void onRegistrationStatus(boolean b)
+        {
+            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            view.removeAllViews();
+            TextView text = new TextView(getApplicationContext());
+            if (b)
+            {
+                text.setText("Device is already registered");
+                view.addView(text);
+            }
+            else
+            {
+                text.setText("Device is not registered");
+                view.addView(text);
             }
         }
     }
