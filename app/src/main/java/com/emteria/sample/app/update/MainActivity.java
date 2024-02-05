@@ -423,25 +423,21 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        public void onDeviceRegistered()
+        public void onRegistrationStatus(boolean b)
         {
             LinearLayout view = activity.findViewById(R.id.sscrolLayout);
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
-            text.setText("Device is already registered");
-
-            view.addView(text);
-        }
-
-        @Override
-        public void onDeviceNotRegistered()
-        {
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
-            view.removeAllViews();
-            TextView text = new TextView(getApplicationContext());
-            text.setText("Device is not registered");
-
-            view.addView(text);
+            if (b)
+            {
+                text.setText("Device is already registered");
+                view.addView(text);
+            }
+            else
+            {
+                text.setText("Device is not registered");
+                view.addView(text);
+            }
         }
     }
 }
