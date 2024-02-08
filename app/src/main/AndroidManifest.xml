@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="com.emteria.permission.MANAGE_APP_UPDATES" />
-    <uses-permission android:name="com.emteria.permission.MANAGE_DEVICE_REGISTRATION" />
-
     <queries>
         <package android:name="com.emteria.storage" />
     </queries>
+
+    <uses-permission android:name="emteria.permission.MANAGE_APP_UPDATES" />
+    <uses-permission android:name="emteria.permission.MANAGE_DEVICE_REGISTRATION" />
 
     <application
         android:icon="@mipmap/ic_launcher"

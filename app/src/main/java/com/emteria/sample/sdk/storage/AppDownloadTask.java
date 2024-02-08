@@ -1,4 +1,4 @@
-package com.emteria.sample.app.update;
+package com.emteria.sample.sdk.storage;
 
 import android.content.Context;
 import android.os.AsyncTask;
@@ -8,12 +8,12 @@ import com.emteria.storage.contract.managers.PackageDownloadManager;
 
 import java.util.List;
 
-public class DownloadTask extends AsyncTask<PackageDownloadManager, Void, Void>
+public class AppDownloadTask extends AsyncTask<PackageDownloadManager, Void, Void>
 {
     private final List<AppPackage> mAppPackages;
     private final Context mContext;
 
-    public DownloadTask(Context context, List<AppPackage> appPackage)
+    public AppDownloadTask(Context context, List<AppPackage> appPackage)
     {
         mAppPackages = appPackage;
         mContext = context;

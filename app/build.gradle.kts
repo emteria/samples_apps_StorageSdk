@@ -4,32 +4,33 @@ plugins {
 }
 
 android {
-    namespace = "com.emteria.sample.app.update"
-    compileSdk = 33
+    namespace = "com.emteria.sample.sdk.storage"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.emteria.sample.app.update"
-        minSdk = 30
-        targetSdk = 33
+        applicationId = "com.emteria.sample.sdk.storage"
+        minSdk = 26
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
     }
 
+    buildFeatures {
+        viewBinding = true
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    buildFeatures {
-        viewBinding = true
     }
 }
 

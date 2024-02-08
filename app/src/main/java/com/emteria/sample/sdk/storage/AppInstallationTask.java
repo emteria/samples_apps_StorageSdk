@@ -1,4 +1,4 @@
-package com.emteria.sample.app.update;
+package com.emteria.sample.sdk.storage;
 
 import android.content.Context;
 import android.os.AsyncTask;
@@ -8,12 +8,12 @@ import com.emteria.storage.contract.managers.PackageInstallationManager;
 
 import java.util.List;
 
-public class InstallTask extends AsyncTask<PackageInstallationManager, Void, Void>
+public class AppInstallationTask extends AsyncTask<PackageInstallationManager, Void, Void>
 {
     private final List<AppPackage> mAppPackages;
     private final Context mContext;
 
-    public InstallTask(Context context, List<AppPackage> appPackages)
+    public AppInstallationTask(Context context, List<AppPackage> appPackages)
     {
         mAppPackages = appPackages;
         mContext = context;

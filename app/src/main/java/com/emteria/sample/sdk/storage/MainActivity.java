@@ -1,8 +1,7 @@
-package com.emteria.sample.app.update;
+package com.emteria.sample.sdk.storage;
 
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -13,30 +12,30 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.emteria.storage.contract.managers.DeviceRegistrationManager;
-import com.emteria.storage.contract.models.AppPackage;
 import com.emteria.storage.contract.managers.PackageDownloadManager;
 import com.emteria.storage.contract.managers.PackageInstallationManager;
 import com.emteria.storage.contract.managers.PackageMetadataManager;
+import com.emteria.storage.contract.models.AppPackage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 public class MainActivity extends AppCompatActivity
 {
-    private static final String TAG = "Emteria SDK Sample";
+    private static final String TAG = "Emteria Storage SDK Sample";
 
     private HashMap<String, List<AppPackage>> mAvailablePackages = new HashMap<>();
     private List<AppPackage> mDownloadedPackages = new ArrayList<>();
 
-    private int mDownloadCounter = 0;
-    private int mInstallCounter = 0;
     private PackageHandler mPackageHandler;
     private DownloadHandler mDownloadHandler;
     private InstallHandler mInstallHandler;
     private RegistrationHandler mRegistrationHandler;
+
+    private int mDownloadCounter = 0;
+    private int mInstallCounter = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -44,27 +43,26 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button getPackages = findViewById(R.id.getPackages);
+        mPackageHandler = new PackageHandler();
+        mInstallHandler = new InstallHandler();
+        mDownloadHandler = new DownloadHandler();
+        mRegistrationHandler = new RegistrationHandler();
 
-        mPackageHandler = new PackageHandler(this);
-        mInstallHandler = new InstallHandler(this);
-        mDownloadHandler = new DownloadHandler(this);
-        mRegistrationHandler = new RegistrationHandler(this);
-
-        getPackages.setOnClickListener(v ->
+        Button getFdroidPackages = findViewById(R.id.getPackages);
+        getFdroidPackages.setOnClickListener(v ->
         {
             LinearLayout view = findViewById(R.id.sscrolLayout);
             view.removeAllViews();
-            PackageTask t = new PackageTask(getApplicationContext(), "emteria");
+            AppRetrievalTask t = new AppRetrievalTask(getApplicationContext(), "emteria");
             t.execute(mPackageHandler);
         });
 
-        Button getS3Packages = findViewById(R.id.getPackagesS3);
-        getS3Packages.setOnClickListener(v ->
+        Button getUploadedPackages = findViewById(R.id.getPackagesS3);
+        getUploadedPackages.setOnClickListener(v ->
         {
             LinearLayout view = findViewById(R.id.sscrolLayout);
             view.removeAllViews();
-            PackageTask t = new PackageTask(getApplicationContext());
+            AppRetrievalTask t = new AppRetrievalTask(getApplicationContext());
             t.execute(mPackageHandler);
         });
 
@@ -111,7 +109,7 @@ public class MainActivity extends AppCompatActivity
             }
 
             view.removeAllViews();
-            DownloadTask t = new DownloadTask(getApplicationContext(), toDownload);
+            AppDownloadTask t = new AppDownloadTask(getApplicationContext(), toDownload);
             t.execute(mDownloadHandler);
 
             mDownloadCounter = toDownload.size();
@@ -154,7 +152,7 @@ public class MainActivity extends AppCompatActivity
             }
 
             Log.d(TAG, "Installable apps are: " + installablePackages);
-            InstallTask task = new InstallTask(getApplicationContext(), installablePackages);
+            AppInstallationTask task = new AppInstallationTask(getApplicationContext(), installablePackages);
             task.execute(mInstallHandler);
 
             mInstallCounter = installablePackages.size();
@@ -162,55 +160,41 @@ public class MainActivity extends AppCompatActivity
         });
 
         Button registerDevice = findViewById(R.id.registerDevice);
-        registerDevice.setOnClickListener(new View.OnClickListener()
+        registerDevice.setOnClickListener(v ->
         {
-            @Override
-            public void onClick(View v)
+            EditText universalLicense = findViewById(R.id.universalLicense);
+            if (universalLicense.getText().toString().isEmpty())
             {
-                EditText universalLicense = findViewById(R.id.universalLicense);
-                if (universalLicense.getText().toString().isEmpty())
-                {
-                    Log.d(TAG, "universal license is empty");
-                    return;
-                }
-                RegisterDeviceTask task = new RegisterDeviceTask(getApplicationContext(), universalLicense.getText().toString());
-                task.execute(mRegistrationHandler);
+                Log.d(TAG, "universal license is empty");
+                return;
             }
+            DeviceRegistrationTask task = new DeviceRegistrationTask(getApplicationContext(), universalLicense.getText().toString());
+            task.execute(mRegistrationHandler);
         });
 
         Button deviceStatus = findViewById(R.id.deviceStatus);
-        deviceStatus.setOnClickListener(new View.OnClickListener()
+        deviceStatus.setOnClickListener(v ->
         {
-            @Override
-            public void onClick(View v)
-            {
-                DeviceStatusTask task = new DeviceStatusTask(getApplicationContext());
-                task.execute(mRegistrationHandler);
-            }
+            DeviceStatusTask task = new DeviceStatusTask(getApplicationContext());
+            task.execute(mRegistrationHandler);
         });
     }
 
     private class PackageHandler extends PackageMetadataManager
     {
-        private static final String TAG = "ExternalUpdateSample - PackageHandler";
-        private final MainActivity activity;
-
-        private PackageHandler(MainActivity activity) {
-            this.activity = activity;
-        }
-
         @Override
-        public void onReceive(HashMap<String, List<AppPackage>> packages) {
-            activity.mAvailablePackages = packages;
+        public void onReceive(HashMap<String, List<AppPackage>> packages)
+        {
+            mAvailablePackages = packages;
             Log.d(TAG, packages.toString());
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             view.removeAllViews();
             for (Map.Entry<String, List<AppPackage>> entry : packages.entrySet())
             {
                 List<AppPackage> appPackages = entry.getValue();
                 for (AppPackage p : appPackages)
                 {
-                    CheckBox c = new CheckBox(activity.getApplicationContext());
+                    CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
                     c.setChecked(false);
                     c.setText((p.getApkName() != null) ? p.getApkName() : p.getPackageName());
                     view.addView(c);
@@ -222,24 +206,17 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onFailure(String error)
         {
-
+            Log.e(TAG, "Error " + error);
         }
     }
 
     private class DownloadHandler extends PackageDownloadManager
     {
-        private static final String TAG = "ExternalUpdateSample - DownloadHandler";
-        private final MainActivity activity;
-
-        private DownloadHandler(MainActivity activity) {
-            this.activity = activity;
-        }
-
         @Override
         public void onDownloadFinished(AppPackage appPackage)
         {
             mDownloadedPackages.add(appPackage);
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             boolean found = false;
             for (int i = 0; i < view.getChildCount(); i++)
             {
@@ -262,7 +239,7 @@ public class MainActivity extends AppCompatActivity
 
             if (!found)
             {
-                CheckBox c = new CheckBox(activity.getApplicationContext());
+                CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
                 c.setText(appPackage.getApkName() + " download finished");
                 c.setChecked(false);
                 view.addView(c);
@@ -285,7 +262,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onProgressChanged(AppPackage appPackage, int progress)
         {
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             boolean found = false;
             for (int i = 0; i < view.getChildCount(); i++)
             {
@@ -308,7 +285,7 @@ public class MainActivity extends AppCompatActivity
 
             if (!found)
             {
-                CheckBox c = new CheckBox(activity.getApplicationContext());
+                CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
                 c.setText(appPackage.getApkName() + " download progress: " + progress + "%");
                 c.setChecked(false);
                 view.addView(c);
@@ -318,17 +295,10 @@ public class MainActivity extends AppCompatActivity
 
     private class InstallHandler extends PackageInstallationManager
     {
-        private static final String TAG = "ExternalUpdateSample - InstallHandler";
-        private final MainActivity activity;
-
-        private InstallHandler(MainActivity activity) {
-            this.activity = activity;
-        }
-
         @Override
         public void onInstallSuccessful(AppPackage appPackage)
         {
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             for (int i = 0; i < view.getChildCount(); i++)
             {
                 CheckBox c = null;
@@ -346,7 +316,7 @@ public class MainActivity extends AppCompatActivity
                     view.removeView(c);
                 }
             }
-            TextView v = new TextView(activity.getApplicationContext());
+            TextView v = new TextView(MainActivity.this.getApplicationContext());
             v.setText("Package " + appPackage.getApkName() +  ": installation successful");
             view.addView(v);
             mInstallCounter--;
@@ -359,7 +329,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onInstallFailed(AppPackage appPackage, String error)
         {
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             for (int i = 0; i < view.getChildCount(); i++)
             {
                 CheckBox c = null;
@@ -378,7 +348,7 @@ public class MainActivity extends AppCompatActivity
                 }
             }
 
-            TextView v = new TextView(activity.getApplicationContext());
+            TextView v = new TextView(MainActivity.this.getApplicationContext());
             v.setText("Package " + appPackage.getApkName() +  "installation failed");
             view.addView(v);
 
@@ -392,18 +362,10 @@ public class MainActivity extends AppCompatActivity
 
     private class RegistrationHandler extends DeviceRegistrationManager
     {
-        private static final String TAG = "ExternalUpdateSample - RegistrationHandler";
-        private final MainActivity activity;
-
-        private RegistrationHandler(MainActivity activity) {
-            this.activity = activity;
-        }
-
-
         @Override
         public void onRegistrationSuccess()
         {
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             text.setText("Device successfully registered");
@@ -414,7 +376,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onRegistrationFailure(String s)
         {
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             text.setText("Device register failed");
@@ -425,7 +387,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onRegistrationStatus(boolean b)
         {
-            LinearLayout view = activity.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             if (b)

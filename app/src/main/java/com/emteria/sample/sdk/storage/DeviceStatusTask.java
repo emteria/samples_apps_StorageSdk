@@ -1,4 +1,4 @@
-package com.emteria.sample.app.update;
+package com.emteria.sample.sdk.storage;
 
 import android.content.Context;
 import android.os.AsyncTask;

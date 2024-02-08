@@ -1,35 +1,31 @@
-package com.emteria.sample.app.update;
+package com.emteria.sample.sdk.storage;
 
 import android.content.Context;
 import android.os.AsyncTask;
-import android.util.Log;
 
 import com.emteria.storage.contract.managers.PackageMetadataManager;
 
-public class PackageTask extends AsyncTask<PackageMetadataManager, Void, Void>
+public class AppRetrievalTask extends AsyncTask<PackageMetadataManager, Void, Void>
 {
     private final Context mContext;
     private final String mRepoName;
 
-    public PackageTask(Context context, String repoName)
+    public AppRetrievalTask(Context context, String repoName)
     {
-        this.mContext = context;
-        this.mRepoName = repoName;
+        mContext = context;
+        mRepoName = repoName;
     }
 
-    public PackageTask(Context context)
+    public AppRetrievalTask(Context context)
     {
-        this.mContext = context;
-        this.mRepoName = null;
+        mContext = context;
+        mRepoName = null;
     }
 
     @Override
     protected Void doInBackground(PackageMetadataManager... packageListManagers)
     {
-        Log.i("Package TASK","Started getPackages");
-
         PackageMetadataManager mPackageHandler = packageListManagers[0];
-
         mPackageHandler.bindToAppManagement(mContext);
         if (mRepoName != null)
         {

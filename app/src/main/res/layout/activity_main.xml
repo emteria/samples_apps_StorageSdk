@@ -5,10 +5,9 @@
     android:orientation="vertical">
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:weightSum="1.0">
+        android:orientation="horizontal">
 
         <LinearLayout
             android:layout_width="fill_parent"
@@ -20,19 +19,19 @@
                 android:id="@+id/getPackages"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:text="Get Packages (Fdroid)" />
+                android:text="Get FDroid apps" />
 
             <Button
                 android:id="@+id/getPackagesS3"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:text="Get Packages (S3)" />
+                android:text="Get uploaded apps" />
 
             <EditText
                 android:id="@+id/universalLicense"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Universal License" />
+                android:hint="Universal License" />
 
         </LinearLayout>
 
@@ -58,13 +57,13 @@
                 android:id="@+id/registerDevice"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:text="Register Device" />
+                android:text="Register device" />
 
             <Button
                 android:id="@+id/deviceStatus"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:text="Get Device Status" />
+                android:text="Get registration status" />
 
         </LinearLayout>
     </LinearLayout>
@@ -78,6 +77,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical" />
+
     </ScrollView>
 
 </LinearLayout>
