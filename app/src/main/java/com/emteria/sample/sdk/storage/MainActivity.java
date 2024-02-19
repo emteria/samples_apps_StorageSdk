@@ -11,6 +11,11 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.emteria.sample.sdk.storage.tasks.AppDownloadTask;
+import com.emteria.sample.sdk.storage.tasks.AppInstallationTask;
+import com.emteria.sample.sdk.storage.tasks.AppRetrievalTask;
+import com.emteria.sample.sdk.storage.tasks.DeviceRegistrationTask;
+import com.emteria.sample.sdk.storage.tasks.DeviceStatusTask;
 import com.emteria.storage.contract.managers.DeviceRegistrationManager;
 import com.emteria.storage.contract.managers.PackageDownloadManager;
 import com.emteria.storage.contract.managers.PackageInstallationManager;
@@ -255,8 +260,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onDownloadFailed(AppPackage appPackage, String error)
         {
-            Log.d(MainActivity.class.getSimpleName(), "Download for " + appPackage.getApkName() + " failed because of:");
-            Log.d(MainActivity.class.getSimpleName(), error);
+            Log.d(MainActivity.class.getSimpleName(), "Download for " + appPackage.getApkName() + " failed: " + error);
         }
 
         @Override
