@@ -26,7 +26,7 @@ public class AppDownloadTask extends AsyncTask<PackageDownloadManager, Void, Voi
         p.bindToAppManagement(mContext);
         for (AppPackage app : mAppPackages)
         {
-            p.downloadPackage(app);
+            p.downloadPackage(app.getAppId());
         }
 
         return null;
