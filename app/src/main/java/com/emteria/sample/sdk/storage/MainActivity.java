@@ -258,9 +258,9 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        public void onDownloadFailed(AppPackage appPackage, String error)
+        public void onDownloadFailed(String appPackageId, String error)
         {
-            Log.d(MainActivity.class.getSimpleName(), "Download for " + appPackage.getApkName() + " failed: " + error);
+            Log.d(MainActivity.class.getSimpleName(), "Download for " + appPackageId + " failed: " + error);
         }
 
         @Override
@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        public void onInstallFailed(AppPackage appPackage, String error)
+        public void onInstallFailed(String appPackageId, String error)
         {
             LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             for (int i = 0; i < view.getChildCount(); i++)
@@ -345,15 +345,20 @@ public class MainActivity extends AppCompatActivity
                 {
                     continue;
                 }
-
-                if (c.getText().toString().contains(appPackage.getApkName()))
+                for (AppPackage app : mDownloadedPackages)
                 {
-                    view.removeView(c);
+                    if (app.getAppId().equals(appPackageId))
+                    {
+                        if (c.getText().toString().contains(app.getApkName()))
+                        {
+                            view.removeView(c);
+                        }
+                    }
                 }
             }
 
             TextView v = new TextView(MainActivity.this.getApplicationContext());
-            v.setText("Package " + appPackage.getApkName() +  "installation failed");
+            v.setText("Package with id " + appPackageId +  "installation failed");
             view.addView(v);
 
             mInstallCounter--;
