@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity
 {
     private static final String TAG = "Emteria Storage SDK Sample";
 
-    private HashMap<String, List<AppPackage>> mAvailablePackages = new HashMap<>();
+    private HashMap<String, AppPackage> mAvailablePackages = new HashMap<>();
     private List<AppPackage> mDownloadedPackages = new ArrayList<>();
 
     private PackageHandler mPackageHandler;
@@ -88,20 +88,17 @@ public class MainActivity extends AppCompatActivity
                 CheckBox box = (CheckBox) view.getChildAt(i);
                 if (box.isChecked())
                 {
-                    for (Map.Entry<String, List<AppPackage>> entry : mAvailablePackages.entrySet())
+                    for (AppPackage a : mAvailablePackages.values())
                     {
-                        for (AppPackage a : entry.getValue())
+                        if (box.getText().equals(a.getApkName()))
                         {
-                            if (box.getText().equals(a.getApkName()))
+                            if (a.isInstalled())
                             {
-                                if (a.isInstalled())
-                                {
-                                    Toast.makeText(getApplicationContext(), a.getApkName() + " is already installed", Toast.LENGTH_LONG).show();
-                                    break;
-                                }
-                                toDownload.add(a);
+                                Toast.makeText(getApplicationContext(), a.getApkName() + " is already installed", Toast.LENGTH_LONG).show();
                                 break;
                             }
+                            toDownload.add(a);
+                            break;
                         }
                     }
                 }
@@ -118,7 +115,6 @@ public class MainActivity extends AppCompatActivity
             t.execute(mDownloadHandler);
 
             mDownloadCounter = toDownload.size();
-            mAvailablePackages = new HashMap<>();
         });
 
         Button installPackages = findViewById(R.id.installPackages);
@@ -190,18 +186,18 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onReceive(HashMap<String, List<AppPackage>> packages)
         {
-            mAvailablePackages = packages;
             Log.d(TAG, packages.toString());
             LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             view.removeAllViews();
-            for (Map.Entry<String, List<AppPackage>> entry : packages.entrySet())
+            mAvailablePackages.clear();
+            for (List<AppPackage> apps : packages.values())
             {
-                List<AppPackage> appPackages = entry.getValue();
-                for (AppPackage p : appPackages)
+                for (AppPackage app : apps)
                 {
+                    mAvailablePackages.put(app.getAppId(), app);
                     CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
                     c.setChecked(false);
-                    c.setText((p.getApkName() != null) ? p.getApkName() : p.getPackageName());
+                    c.setText((app.getApkName() != null) ? app.getApkName() : app.getPackageName());
                     view.addView(c);
                 }
             }
@@ -258,16 +254,18 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        public void onDownloadFailed(AppPackage appPackage, String error)
+        public void onDownloadFailed(String appPackageId, String error)
         {
-            Log.d(MainActivity.class.getSimpleName(), "Download for " + appPackage.getApkName() + " failed: " + error);
+            Log.d(MainActivity.class.getSimpleName(), "Download for " + appPackageId + " failed: " + error);
         }
 
         @Override
-        public void onProgressChanged(AppPackage appPackage, int progress)
+        public void onProgressChanged(String appPackageId, int progress)
         {
             LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             boolean found = false;
+            AppPackage app = mAvailablePackages.get(appPackageId);
+
             for (int i = 0; i < view.getChildCount(); i++)
             {
                 CheckBox c = null;
@@ -280,9 +278,9 @@ public class MainActivity extends AppCompatActivity
                     continue;
                 }
 
-                if (c.getText().toString().contains(appPackage.getApkName()))
+                if (c.getText().toString().contains(app.getApkName()))
                 {
-                    c.setText(appPackage.getApkName() + " download progress: " + progress + "%");
+                    c.setText(app.getApkName() + " download progress: " + progress + "%");
                     found = true;
                 }
             }
@@ -290,7 +288,7 @@ public class MainActivity extends AppCompatActivity
             if (!found)
             {
                 CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
-                c.setText(appPackage.getApkName() + " download progress: " + progress + "%");
+                c.setText(app.getApkName() + " download progress: " + progress + "%");
                 c.setChecked(false);
                 view.addView(c);
             }
@@ -331,7 +329,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         @Override
-        public void onInstallFailed(AppPackage appPackage, String error)
+        public void onInstallFailed(String appPackageId, String error)
         {
             LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
             for (int i = 0; i < view.getChildCount(); i++)
@@ -345,15 +343,20 @@ public class MainActivity extends AppCompatActivity
                 {
                     continue;
                 }
-
-                if (c.getText().toString().contains(appPackage.getApkName()))
+                for (AppPackage app : mDownloadedPackages)
                 {
-                    view.removeView(c);
+                    if (app.getAppId().equals(appPackageId))
+                    {
+                        if (c.getText().toString().contains(app.getApkName()))
+                        {
+                            view.removeView(c);
+                        }
+                    }
                 }
             }
 
             TextView v = new TextView(MainActivity.this.getApplicationContext());
-            v.setText("Package " + appPackage.getApkName() +  "installation failed");
+            v.setText("Package with id " + appPackageId +  "installation failed");
             view.addView(v);
 
             mInstallCounter--;

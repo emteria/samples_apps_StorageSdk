@@ -26,7 +26,7 @@ public class AppInstallationTask extends AsyncTask<PackageInstallationManager, V
         p.bindToAppManagement(mContext);
         for (AppPackage app : mAppPackages)
         {
-            p.installPackage(app);
+            p.installPackage(app.getAppId());
         }
 
 
