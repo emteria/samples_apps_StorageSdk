@@ -35,7 +35,7 @@ android {
 }
 
 dependencies {
-    implementation(files("src/main/libs/emteria-storage-sdk.jar"))
+    implementation(fileTree("src/main/libs") { include("*.jar") })
 
     implementation(libs.appcompat)
     implementation(libs.material)

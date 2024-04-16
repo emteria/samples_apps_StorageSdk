@@ -25,14 +25,13 @@ import com.emteria.storage.contract.models.AppPackage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity
 {
     private static final String TAG = "Emteria Storage SDK Sample";
 
-    private HashMap<String, AppPackage> mAvailablePackages = new HashMap<>();
-    private List<AppPackage> mDownloadedPackages = new ArrayList<>();
+    private final HashMap<String, AppPackage> mAvailablePackages = new HashMap<>();
+    private final List<AppPackage> mDownloadedPackages = new ArrayList<>();
 
     private PackageHandler mPackageHandler;
     private DownloadHandler mDownloadHandler;
@@ -157,7 +156,7 @@ public class MainActivity extends AppCompatActivity
             task.execute(mInstallHandler);
 
             mInstallCounter = installablePackages.size();
-            mDownloadedPackages = new ArrayList<>();
+            mDownloadedPackages.clear();
         });
 
         Button registerDevice = findViewById(R.id.registerDevice);
