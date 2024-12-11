@@ -65,6 +65,12 @@
                 android:layout_height="wrap_content"
                 android:text="Get registration status" />
 
+            <Button
+                android:id="@+id/registrationInformation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Get registration information" />
+
         </LinearLayout>
     </LinearLayout>
 
@@ -73,7 +79,7 @@
         android:layout_height="match_parent">
 
         <LinearLayout
-            android:id="@+id/sscrolLayout"
+            android:id="@+id/scrollLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical" />

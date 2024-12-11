@@ -16,11 +16,13 @@ import com.emteria.sample.sdk.storage.tasks.AppInstallationTask;
 import com.emteria.sample.sdk.storage.tasks.AppRetrievalTask;
 import com.emteria.sample.sdk.storage.tasks.DeviceRegistrationTask;
 import com.emteria.sample.sdk.storage.tasks.DeviceStatusTask;
+import com.emteria.sample.sdk.storage.tasks.RegistrationDetailsTask;
 import com.emteria.storage.contract.managers.DeviceRegistrationManager;
 import com.emteria.storage.contract.managers.PackageDownloadManager;
 import com.emteria.storage.contract.managers.PackageInstallationManager;
 import com.emteria.storage.contract.managers.PackageMetadataManager;
 import com.emteria.storage.contract.models.AppPackage;
+import com.emteria.storage.contract.models.RegistrationDetails;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,7 +57,7 @@ public class MainActivity extends AppCompatActivity
         Button getFdroidPackages = findViewById(R.id.getPackages);
         getFdroidPackages.setOnClickListener(v ->
         {
-            LinearLayout view = findViewById(R.id.sscrolLayout);
+            LinearLayout view = findViewById(R.id.scrollLayout);
             view.removeAllViews();
             AppRetrievalTask t = new AppRetrievalTask(getApplicationContext(), "emteria");
             t.execute(mPackageHandler);
@@ -64,13 +66,13 @@ public class MainActivity extends AppCompatActivity
         Button getUploadedPackages = findViewById(R.id.getPackagesS3);
         getUploadedPackages.setOnClickListener(v ->
         {
-            LinearLayout view = findViewById(R.id.sscrolLayout);
+            LinearLayout view = findViewById(R.id.scrollLayout);
             view.removeAllViews();
             AppRetrievalTask t = new AppRetrievalTask(getApplicationContext());
             t.execute(mPackageHandler);
         });
 
-        LinearLayout view = findViewById(R.id.sscrolLayout);
+        LinearLayout view = findViewById(R.id.scrollLayout);
 
         Button downloadPackage = findViewById(R.id.downloadPackages);
         downloadPackage.setOnClickListener(v ->
@@ -178,6 +180,13 @@ public class MainActivity extends AppCompatActivity
             DeviceStatusTask task = new DeviceStatusTask(getApplicationContext());
             task.execute(mRegistrationHandler);
         });
+
+        Button registrationDetails = findViewById(R.id.registrationInformation);
+        registrationDetails.setOnClickListener(v ->
+        {
+            RegistrationDetailsTask task = new RegistrationDetailsTask(getApplicationContext());
+            task.execute(mRegistrationHandler);
+        });
     }
 
     private class PackageHandler extends PackageMetadataManager
@@ -186,7 +195,7 @@ public class MainActivity extends AppCompatActivity
         public void onReceive(HashMap<String, List<AppPackage>> packages)
         {
             Log.d(TAG, packages.toString());
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             view.removeAllViews();
             mAvailablePackages.clear();
             for (List<AppPackage> apps : packages.values())
@@ -216,7 +225,7 @@ public class MainActivity extends AppCompatActivity
         public void onDownloadFinished(AppPackage appPackage)
         {
             mDownloadedPackages.add(appPackage);
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             boolean found = false;
             for (int i = 0; i < view.getChildCount(); i++)
             {
@@ -261,7 +270,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onProgressChanged(String appPackageId, int progress)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             boolean found = false;
             AppPackage app = mAvailablePackages.get(appPackageId);
 
@@ -299,7 +308,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onInstallSuccessful(AppPackage appPackage)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             for (int i = 0; i < view.getChildCount(); i++)
             {
                 CheckBox c = null;
@@ -330,7 +339,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onInstallFailed(String appPackageId, String error)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             for (int i = 0; i < view.getChildCount(); i++)
             {
                 CheckBox c = null;
@@ -371,7 +380,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onRegistrationSuccess()
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             text.setText("Device successfully registered");
@@ -382,7 +391,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onRegistrationFailure(String s)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             text.setText("Device register failed");
@@ -393,7 +402,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onRegistrationStatus(boolean b)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.sscrolLayout);
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             if (b)
@@ -406,6 +415,31 @@ public class MainActivity extends AppCompatActivity
                 text.setText("Device is not registered");
                 view.addView(text);
             }
+        }
+
+        @Override
+        public void onRegistrationDetailsSuccess(RegistrationDetails reginfo)
+        {
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
+            view.removeAllViews();
+            TextView text = new TextView(getApplicationContext());
+            text.append(reginfo.getDeviceId() + "\n");
+            text.append(reginfo.getDeviceName() + "\n");
+            text.append(reginfo.getDeviceDescription() + "\n");
+            text.append(reginfo.getGroupId() + "\n");
+            text.append(reginfo.getGroupName() + "\n");
+            text.append(reginfo.getDeviceDescription() + "\n");
+            view.addView(text);
+        }
+
+        @Override
+        public void onRegistrationDetailsFailure(String s)
+        {
+            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
+            view.removeAllViews();
+            TextView text = new TextView(getApplicationContext());
+            text.append("No registration details: " + s);
+            view.addView(text);
         }
     }
 }

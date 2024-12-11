@@ -1,0 +1,20 @@
+###############################################################################
+# Set default behavior to automatically normalize line endings.
+###############################################################################
+
+* text=auto
+
+###############################################################################
+# Define text files and diff handling
+###############################################################################
+
+*.bat       text eol=crlf
+
+*.gradle    text diff=java
+*.java      text diff=java
+*.kt        text diff=kotlin
+
+*.class     binary
+*.jar       binary
+*.so        binary
+*.jks       binary
