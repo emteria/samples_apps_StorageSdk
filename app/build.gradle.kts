@@ -11,8 +11,8 @@ android {
         applicationId = "com.emteria.sample.sdk.storage"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 131
+        versionName = "1.3.1"
     }
 
     buildFeatures {
