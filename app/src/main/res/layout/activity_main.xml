@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -7,83 +7,142 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:padding="8dp"
+        android:orientation="vertical">
+
+        <TextView style="@style/sectionHeader"
+            android:layout_marginTop="0dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Device registration">
+        </TextView>
+
+        <EditText
+            android:id="@+id/universalLicense"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter universal license here" />
 
         <LinearLayout
-            android:layout_width="fill_parent"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_weight=".5">
-
-            <Button
-                android:id="@+id/getPackages"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="Get FDroid apps" />
-
-            <Button
-                android:id="@+id/getPackagesS3"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="Get uploaded apps" />
-
-            <EditText
-                android:id="@+id/universalLicense"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Universal License" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_weight=".5">
-
-            <Button
-                android:id="@+id/downloadPackages"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="Download Packages" />
-
-            <Button
-                android:id="@+id/installPackages"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="Install Packages" />
+            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/registerDevice"
-                android:layout_width="fill_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Register device" />
 
             <Button
                 android:id="@+id/deviceStatus"
-                android:layout_width="fill_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Get registration status" />
 
             <Button
                 android:id="@+id/registrationInformation"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Get registration information" />
 
         </LinearLayout>
-    </LinearLayout>
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        <TextView style="@style/sectionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Application management">
+        </TextView>
+
+        <EditText
+            android:id="@+id/fdroidRepoName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter FDroid repo name here" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/getPackages"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Get FDroid apps" />
+
+            <Button
+                android:id="@+id/getPackagesS3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Get workspace apps" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/downloadPackages"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Download packages" />
+
+            <Button
+                android:id="@+id/installPackages"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Install packages" />
+
+        </LinearLayout>
+
+        <TextView style="@style/sectionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="File management">
+        </TextView>
+
+        <EditText
+            android:id="@+id/filePath"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter file path here" />
+
+        <Button
+            android:id="@+id/uploadFile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Upload file" />
+
+        <TextView style="@style/sectionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Execution results">
+        </TextView>
 
         <LinearLayout
             android:id="@+id/scrollLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical">
 
-    </ScrollView>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No results to show">
+            </TextView>
 
-</LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
