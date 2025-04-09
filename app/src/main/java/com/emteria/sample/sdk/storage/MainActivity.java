@@ -415,7 +415,7 @@ public class MainActivity extends AppCompatActivity
         public void onRegistrationSuccess()
         {
             TextView text = new TextView(getApplicationContext());
-            text.setText("Device successfully registered");
+            text.setText("Device registration successful");
 
             mResultsLayout.removeAllViews();
             mResultsLayout.addView(text);
@@ -441,7 +441,7 @@ public class MainActivity extends AppCompatActivity
             TextView text = new TextView(getApplicationContext());
             if (b)
             {
-                text.setText("Device IS registered");
+                text.setText("Device is registered");
             }
             else
             {

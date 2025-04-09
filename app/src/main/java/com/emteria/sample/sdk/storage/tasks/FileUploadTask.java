@@ -35,14 +35,16 @@ public class FileUploadTask extends AsyncTask<Void, Void, Void>
             File file = new File(mFilePath);
             ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
 
+            String filename = file.getName();
+            Log.i(TAG, "Sending file " + filename + " from " + file.getAbsolutePath());
+
             boolean exists = file.exists();
             boolean readable = file.canRead();
             boolean writable = file.canWrite();
-            Log.i(TAG, "Sending file " + file.getAbsolutePath());
             Log.i(TAG, "Exists: " + exists + ", Readable: " + readable + ", Writeable: " + writable);
 
             mUploadManager.bindToAppManagement(mContext);
-            mUploadManager.uploadFile(mFilePath, pfd);
+            mUploadManager.uploadFile(filename, pfd);
         }
         catch (FileNotFoundException e)
         {
