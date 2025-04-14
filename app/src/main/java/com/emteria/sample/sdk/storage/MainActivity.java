@@ -16,8 +16,10 @@ import com.emteria.sample.sdk.storage.tasks.AppInstallationTask;
 import com.emteria.sample.sdk.storage.tasks.AppRetrievalTask;
 import com.emteria.sample.sdk.storage.tasks.DeviceRegistrationTask;
 import com.emteria.sample.sdk.storage.tasks.DeviceStatusTask;
+import com.emteria.sample.sdk.storage.tasks.FileUploadTask;
 import com.emteria.sample.sdk.storage.tasks.RegistrationDetailsTask;
 import com.emteria.storage.contract.managers.DeviceRegistrationManager;
+import com.emteria.storage.contract.managers.FileUploadManager;
 import com.emteria.storage.contract.managers.PackageDownloadManager;
 import com.emteria.storage.contract.managers.PackageInstallationManager;
 import com.emteria.storage.contract.managers.PackageMetadataManager;
@@ -39,6 +41,9 @@ public class MainActivity extends AppCompatActivity
     private DownloadHandler mDownloadHandler;
     private InstallHandler mInstallHandler;
     private RegistrationHandler mRegistrationHandler;
+    private UploadHandler mUploadHandler;
+
+    private LinearLayout mResultsLayout = null;
 
     private int mDownloadCounter = 0;
     private int mInstallCounter = 0;
@@ -49,30 +54,37 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mResultsLayout = findViewById(R.id.scrollLayout);
+
         mPackageHandler = new PackageHandler();
         mInstallHandler = new InstallHandler();
         mDownloadHandler = new DownloadHandler();
         mRegistrationHandler = new RegistrationHandler();
+        mUploadHandler = new UploadHandler();
 
         Button getFdroidPackages = findViewById(R.id.getPackages);
         getFdroidPackages.setOnClickListener(v ->
         {
-            LinearLayout view = findViewById(R.id.scrollLayout);
-            view.removeAllViews();
-            AppRetrievalTask t = new AppRetrievalTask(getApplicationContext(), "emteria");
+            mResultsLayout.removeAllViews();
+
+            EditText repoNameEdit = findViewById(R.id.fdroidRepoName);
+            if (repoNameEdit.getText().toString().isEmpty())
+            {
+                Toast.makeText(this, "Repo name is required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            AppRetrievalTask t = new AppRetrievalTask(getApplicationContext(), repoNameEdit.getText().toString());
             t.execute(mPackageHandler);
         });
 
         Button getUploadedPackages = findViewById(R.id.getPackagesS3);
         getUploadedPackages.setOnClickListener(v ->
         {
-            LinearLayout view = findViewById(R.id.scrollLayout);
-            view.removeAllViews();
+            mResultsLayout.removeAllViews();
             AppRetrievalTask t = new AppRetrievalTask(getApplicationContext());
             t.execute(mPackageHandler);
         });
-
-        LinearLayout view = findViewById(R.id.scrollLayout);
 
         Button downloadPackage = findViewById(R.id.downloadPackages);
         downloadPackage.setOnClickListener(v ->
@@ -84,9 +96,9 @@ public class MainActivity extends AppCompatActivity
             }
 
             List<AppPackage> toDownload = new ArrayList<>();
-            for (int i = 0; i < view.getChildCount(); i++)
+            for (int i = 0; i < mResultsLayout.getChildCount(); i++)
             {
-                CheckBox box = (CheckBox) view.getChildAt(i);
+                CheckBox box = (CheckBox) mResultsLayout.getChildAt(i);
                 if (box.isChecked())
                 {
                     for (AppPackage a : mAvailablePackages.values())
@@ -111,7 +123,7 @@ public class MainActivity extends AppCompatActivity
                 return;
             }
 
-            view.removeAllViews();
+            mResultsLayout.removeAllViews();
             AppDownloadTask t = new AppDownloadTask(getApplicationContext(), toDownload);
             t.execute(mDownloadHandler);
 
@@ -128,9 +140,9 @@ public class MainActivity extends AppCompatActivity
             }
 
             List<AppPackage> installablePackages = new ArrayList<>();
-            for (int i = 0; i < view.getChildCount(); i++)
+            for (int i = 0; i < mResultsLayout.getChildCount(); i++)
             {
-                CheckBox box = (CheckBox) view.getChildAt(i);
+                CheckBox box = (CheckBox) mResultsLayout.getChildAt(i);
                 if (box.isChecked())
                 {
                     for (AppPackage app : mDownloadedPackages)
@@ -164,12 +176,16 @@ public class MainActivity extends AppCompatActivity
         Button registerDevice = findViewById(R.id.registerDevice);
         registerDevice.setOnClickListener(v ->
         {
+            mResultsLayout.removeAllViews();
+
             EditText universalLicense = findViewById(R.id.universalLicense);
             if (universalLicense.getText().toString().isEmpty())
             {
-                Log.d(TAG, "universal license is empty");
+                Log.e(TAG, "Universal license cannot be empty");
+                Toast.makeText(this, "Universal license required", Toast.LENGTH_SHORT).show();
                 return;
             }
+
             DeviceRegistrationTask task = new DeviceRegistrationTask(getApplicationContext(), universalLicense.getText().toString());
             task.execute(mRegistrationHandler);
         });
@@ -177,6 +193,8 @@ public class MainActivity extends AppCompatActivity
         Button deviceStatus = findViewById(R.id.deviceStatus);
         deviceStatus.setOnClickListener(v ->
         {
+            mResultsLayout.removeAllViews();
+
             DeviceStatusTask task = new DeviceStatusTask(getApplicationContext());
             task.execute(mRegistrationHandler);
         });
@@ -184,8 +202,26 @@ public class MainActivity extends AppCompatActivity
         Button registrationDetails = findViewById(R.id.registrationInformation);
         registrationDetails.setOnClickListener(v ->
         {
+            mResultsLayout.removeAllViews();
+
             RegistrationDetailsTask task = new RegistrationDetailsTask(getApplicationContext());
             task.execute(mRegistrationHandler);
+        });
+
+        Button uploadFile = findViewById(R.id.uploadFile);
+        uploadFile.setOnClickListener(v ->
+        {
+            mResultsLayout.removeAllViews();
+
+            EditText filePathEdit = findViewById(R.id.filePath);
+            if (filePathEdit.getText().toString().isEmpty())
+            {
+                Toast.makeText(this, "File path is required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            FileUploadTask task = new FileUploadTask(getApplicationContext(), mUploadHandler, filePathEdit.getText().toString());
+            task.execute();
         });
     }
 
@@ -194,10 +230,9 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onReceive(HashMap<String, List<AppPackage>> packages)
         {
-            Log.d(TAG, packages.toString());
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            view.removeAllViews();
+            mResultsLayout.removeAllViews();
             mAvailablePackages.clear();
+
             for (List<AppPackage> apps : packages.values())
             {
                 for (AppPackage app : apps)
@@ -206,9 +241,10 @@ public class MainActivity extends AppCompatActivity
                     CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
                     c.setChecked(false);
                     c.setText((app.getApkName() != null) ? app.getApkName() : app.getPackageName());
-                    view.addView(c);
+                    mResultsLayout.addView(c);
                 }
             }
+
             mPackageHandler.unbind(getApplicationContext());
         }
 
@@ -225,14 +261,13 @@ public class MainActivity extends AppCompatActivity
         public void onDownloadFinished(AppPackage appPackage)
         {
             mDownloadedPackages.add(appPackage);
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             boolean found = false;
-            for (int i = 0; i < view.getChildCount(); i++)
+            for (int i = 0; i < mResultsLayout.getChildCount(); i++)
             {
-                CheckBox c = null;
+                CheckBox c;
                 try
                 {
-                    c = (CheckBox) view.getChildAt(i);
+                    c = (CheckBox) mResultsLayout.getChildAt(i);
                 }
                 catch (ClassCastException e)
                 {
@@ -251,7 +286,7 @@ public class MainActivity extends AppCompatActivity
                 CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
                 c.setText(appPackage.getApkName() + " download finished");
                 c.setChecked(false);
-                view.addView(c);
+                mResultsLayout.addView(c);
             }
 
             mDownloadCounter--;
@@ -270,16 +305,15 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onProgressChanged(String appPackageId, int progress)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
             boolean found = false;
             AppPackage app = mAvailablePackages.get(appPackageId);
 
-            for (int i = 0; i < view.getChildCount(); i++)
+            for (int i = 0; i < mResultsLayout.getChildCount(); i++)
             {
-                CheckBox c = null;
+                CheckBox c;
                 try
                 {
-                    c = (CheckBox) view.getChildAt(i);
+                    c = (CheckBox) mResultsLayout.getChildAt(i);
                 }
                 catch (ClassCastException e)
                 {
@@ -298,7 +332,7 @@ public class MainActivity extends AppCompatActivity
                 CheckBox c = new CheckBox(MainActivity.this.getApplicationContext());
                 c.setText(app.getApkName() + " download progress: " + progress + "%");
                 c.setChecked(false);
-                view.addView(c);
+                mResultsLayout.addView(c);
             }
         }
     }
@@ -308,13 +342,12 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onInstallSuccessful(AppPackage appPackage)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            for (int i = 0; i < view.getChildCount(); i++)
+            for (int i = 0; i < mResultsLayout.getChildCount(); i++)
             {
-                CheckBox c = null;
+                CheckBox c;
                 try
                 {
-                    c = (CheckBox) view.getChildAt(i);
+                    c = (CheckBox) mResultsLayout.getChildAt(i);
                 }
                 catch (ClassCastException e)
                 {
@@ -323,12 +356,13 @@ public class MainActivity extends AppCompatActivity
 
                 if (c.getText().toString().contains(appPackage.getApkName()))
                 {
-                    view.removeView(c);
+                    mResultsLayout.removeView(c);
                 }
             }
             TextView v = new TextView(MainActivity.this.getApplicationContext());
             v.setText("Package " + appPackage.getApkName() +  ": installation successful");
-            view.addView(v);
+            mResultsLayout.addView(v);
+
             mInstallCounter--;
             if (mInstallCounter == 0)
             {
@@ -339,38 +373,38 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onInstallFailed(String appPackageId, String error)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            for (int i = 0; i < view.getChildCount(); i++)
+            for (int i = 0; i < mResultsLayout.getChildCount(); i++)
             {
-                CheckBox c = null;
+                CheckBox c;
                 try
                 {
-                    c = (CheckBox) view.getChildAt(i);
+                    c = (CheckBox) mResultsLayout.getChildAt(i);
                 }
                 catch (ClassCastException e)
                 {
                     continue;
                 }
+
                 for (AppPackage app : mDownloadedPackages)
                 {
                     if (app.getAppId().equals(appPackageId))
                     {
                         if (c.getText().toString().contains(app.getApkName()))
                         {
-                            view.removeView(c);
+                            mResultsLayout.removeView(c);
                         }
                     }
                 }
             }
 
             TextView v = new TextView(MainActivity.this.getApplicationContext());
-            v.setText("Package with id " + appPackageId +  "installation failed");
-            view.addView(v);
+            v.setText("Package ID " + appPackageId +  ": installation failed");
+            mResultsLayout.addView(v);
 
             mInstallCounter--;
             if (mInstallCounter == 0)
             {
-                mInstallHandler.unbind(getApplicationContext());
+                unbind(getApplicationContext());
             }
         }
     }
@@ -380,66 +414,100 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onRegistrationSuccess()
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
-            text.setText("Device successfully registered");
+            text.setText("Device registration successful");
 
-            view.addView(text);
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(text);
+
+            unbind(getApplicationContext());
         }
 
         @Override
         public void onRegistrationFailure(String s)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
-            text.setText("Device register failed");
+            text.setText("Device registration failed: " + s);
 
-            view.addView(text);
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(text);
+
+            unbind(getApplicationContext());
         }
 
         @Override
         public void onRegistrationStatus(boolean b)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             if (b)
             {
-                text.setText("Device is already registered");
-                view.addView(text);
+                text.setText("Device is registered");
             }
             else
             {
-                text.setText("Device is not registered");
-                view.addView(text);
+                text.setText("Device is NOT registered");
             }
+
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(text);
+
+            unbind(getApplicationContext());
         }
 
         @Override
         public void onRegistrationDetailsSuccess(RegistrationDetails reginfo)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
-            text.append(reginfo.getDeviceId() + "\n");
-            text.append(reginfo.getDeviceName() + "\n");
-            text.append(reginfo.getDeviceDescription() + "\n");
-            text.append(reginfo.getGroupId() + "\n");
-            text.append(reginfo.getGroupName() + "\n");
-            text.append(reginfo.getDeviceDescription() + "\n");
-            view.addView(text);
+            text.append("Device ID: " + reginfo.getDeviceId() + "\n");
+            text.append("Device name: " + reginfo.getDeviceName() + "\n");
+            text.append("Device description: " + reginfo.getDeviceDescription() + "\n");
+            text.append("Group ID: " + reginfo.getGroupId() + "\n");
+            text.append("Group name: " + reginfo.getGroupName() + "\n");
+            text.append("Group description: " + reginfo.getGroupDescription() + "\n");
+
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(text);
+
+            unbind(getApplicationContext());
         }
 
         @Override
         public void onRegistrationDetailsFailure(String s)
         {
-            LinearLayout view = MainActivity.this.findViewById(R.id.scrollLayout);
-            view.removeAllViews();
             TextView text = new TextView(getApplicationContext());
             text.append("No registration details: " + s);
-            view.addView(text);
+
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(text);
+
+            unbind(getApplicationContext());
+        }
+    }
+
+    private class UploadHandler extends FileUploadManager
+    {
+        @Override
+        public void onUploadSuccess()
+        {
+            TextView text = new TextView(getApplicationContext());
+            text.setText("File upload successful");
+
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(text);
+
+            unbind(getApplicationContext());
+        }
+
+        @Override
+        public void onUploadError(String s)
+        {
+            TextView text = new TextView(getApplicationContext());
+            text.setText("File upload failed: " + s);
+
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(text);
+
+            unbind(getApplicationContext());
         }
     }
 }

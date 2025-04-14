@@ -29,11 +29,11 @@ public class AppRetrievalTask extends AsyncTask<PackageMetadataManager, Void, Vo
         mPackageHandler.bindToAppManagement(mContext);
         if (mRepoName != null)
         {
-            mPackageHandler.getPackages(mRepoName);
+            mPackageHandler.getPackagesFromFDroid(mRepoName);
         }
         else
         {
-            mPackageHandler.getPackages();
+            mPackageHandler.getPackagesFromWorkspace();
         }
 
         return null;

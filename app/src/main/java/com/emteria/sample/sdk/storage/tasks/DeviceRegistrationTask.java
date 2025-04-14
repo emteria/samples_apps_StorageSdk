@@ -12,6 +12,7 @@ public class DeviceRegistrationTask extends AsyncTask<DeviceRegistrationManager,
 
     public DeviceRegistrationTask(Context context, String universalLicense)
     {
+        super();
         mContext = context;
         mUniversalLicense = universalLicense;
     }
