@@ -6,6 +6,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity
     private RegistrationHandler mRegistrationHandler;
     private UploadHandler mUploadHandler;
 
+    private ScrollView mScrollView = null;
     private LinearLayout mResultsLayout = null;
 
     private int mDownloadCounter = 0;
@@ -54,7 +56,8 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mResultsLayout = findViewById(R.id.scrollLayout);
+        mScrollView = findViewById(R.id.scrollView);
+        mResultsLayout = findViewById(R.id.resultsLayout);
 
         mPackageHandler = new PackageHandler();
         mInstallHandler = new InstallHandler();
@@ -419,6 +422,7 @@ public class MainActivity extends AppCompatActivity
 
             mResultsLayout.removeAllViews();
             mResultsLayout.addView(text);
+            mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
 
             unbind(getApplicationContext());
         }
@@ -431,6 +435,7 @@ public class MainActivity extends AppCompatActivity
 
             mResultsLayout.removeAllViews();
             mResultsLayout.addView(text);
+            mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
 
             unbind(getApplicationContext());
         }
@@ -450,6 +455,7 @@ public class MainActivity extends AppCompatActivity
 
             mResultsLayout.removeAllViews();
             mResultsLayout.addView(text);
+            mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
 
             unbind(getApplicationContext());
         }
@@ -467,6 +473,7 @@ public class MainActivity extends AppCompatActivity
 
             mResultsLayout.removeAllViews();
             mResultsLayout.addView(text);
+            mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
 
             unbind(getApplicationContext());
         }
@@ -479,6 +486,7 @@ public class MainActivity extends AppCompatActivity
 
             mResultsLayout.removeAllViews();
             mResultsLayout.addView(text);
+            mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
 
             unbind(getApplicationContext());
         }
@@ -489,24 +497,34 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onUploadSuccess()
         {
-            TextView text = new TextView(getApplicationContext());
-            text.setText("File upload successful");
+            Runnable updateUi = () ->
+            {
+                TextView text = new TextView(getApplicationContext());
+                text.setText("File upload successful");
 
-            mResultsLayout.removeAllViews();
-            mResultsLayout.addView(text);
+                mResultsLayout.removeAllViews();
+                mResultsLayout.addView(text);
+                mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
+            };
 
+            runOnUiThread(updateUi);
             unbind(getApplicationContext());
         }
 
         @Override
         public void onUploadError(String s)
         {
-            TextView text = new TextView(getApplicationContext());
-            text.setText("File upload failed: " + s);
+            Runnable updateUi = () ->
+            {
+                TextView text = new TextView(getApplicationContext());
+                text.setText("File upload failed: " + s);
 
-            mResultsLayout.removeAllViews();
-            mResultsLayout.addView(text);
+                mResultsLayout.removeAllViews();
+                mResultsLayout.addView(text);
+                mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
+            };
 
+            runOnUiThread(updateUi);
             unbind(getApplicationContext());
         }
     }

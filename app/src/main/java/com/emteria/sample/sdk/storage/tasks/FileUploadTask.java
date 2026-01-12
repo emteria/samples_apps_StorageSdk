@@ -5,7 +5,6 @@ import android.os.AsyncTask;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
-import com.emteria.storage.contract.managers.DeviceRegistrationManager;
 import com.emteria.storage.contract.managers.FileUploadManager;
 
 import java.io.File;
@@ -22,6 +21,7 @@ public class FileUploadTask extends AsyncTask<Void, Void, Void>
     public FileUploadTask(Context context, FileUploadManager uploadManager, String filePath)
     {
         super();
+
         mContext = context;
         mUploadManager = uploadManager;
         mFilePath = filePath;
@@ -33,22 +33,26 @@ public class FileUploadTask extends AsyncTask<Void, Void, Void>
         try
         {
             File file = new File(mFilePath);
-            ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
-
             String filename = file.getName();
             Log.i(TAG, "Sending file " + filename + " from " + file.getAbsolutePath());
 
             boolean exists = file.exists();
             boolean readable = file.canRead();
             boolean writable = file.canWrite();
-            Log.i(TAG, "Exists: " + exists + ", Readable: " + readable + ", Writeable: " + writable);
+            Log.i(TAG, "File exists: " + exists + ", readable: " + readable + ", writeable: " + writable);
 
-            mUploadManager.bindToAppManagement(mContext);
+            if (!mUploadManager.serviceIsBound())
+            {
+                mUploadManager.bindToAppManagement(mContext);
+            }
+
+            ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
             mUploadManager.uploadFile(filename, pfd);
         }
         catch (FileNotFoundException e)
         {
-            mUploadManager.onUploadError(e.getMessage());
+            String message = e.getMessage();
+            mUploadManager.onUploadError(message);
         }
 
         return null;
