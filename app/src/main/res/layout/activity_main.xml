@@ -124,6 +124,33 @@
             android:layout_height="wrap_content"
             android:text="Upload file" />
 
+        <EditText
+            android:id="@+id/storageFileId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter storage file id here" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/listFiles"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="List files" />
+
+            <Button
+                android:id="@+id/downloadFile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Download file" />
+
+        </LinearLayout>
+
         <TextView style="@style/sectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
