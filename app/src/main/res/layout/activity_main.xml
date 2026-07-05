@@ -122,6 +122,7 @@
             android:id="@+id/uploadFile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:onClick="onFileUploadClick"
             android:text="Upload file" />
 
         <EditText
@@ -140,6 +141,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:onClick="onFileListingClick"
                 android:text="List files" />
 
             <Button
@@ -147,6 +149,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:onClick="onFileDownloadClick"
                 android:text="Download file" />
 
         </LinearLayout>

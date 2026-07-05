@@ -1,8 +1,17 @@
 package com.emteria.sample.sdk.storage;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -18,27 +27,22 @@ import com.emteria.sample.sdk.storage.tasks.AppInstallationTask;
 import com.emteria.sample.sdk.storage.tasks.AppRetrievalTask;
 import com.emteria.sample.sdk.storage.tasks.DeviceRegistrationTask;
 import com.emteria.sample.sdk.storage.tasks.DeviceStatusTask;
-import com.emteria.sample.sdk.storage.tasks.FileListingTask;
-import com.emteria.sample.sdk.storage.tasks.FileRetrievalTask;
-import com.emteria.sample.sdk.storage.tasks.FileUploadTask;
 import com.emteria.sample.sdk.storage.tasks.RegistrationDetailsTask;
+import com.emteria.sample.sdk.storage.utils.HashUtils;
+import com.emteria.storage.contract.MessengerConfig;
 import com.emteria.storage.contract.managers.DeviceRegistrationManager;
-import com.emteria.storage.contract.managers.FileDownloadManager;
-import com.emteria.storage.contract.managers.FileListManager;
-import com.emteria.storage.contract.managers.FileUploadManager;
+import com.emteria.storage.contract.managers.FileDownloadContract;
+import com.emteria.storage.contract.managers.FileListContract;
+import com.emteria.storage.contract.managers.FileUploadContract;
 import com.emteria.storage.contract.managers.PackageDownloadManager;
 import com.emteria.storage.contract.managers.PackageInstallationManager;
 import com.emteria.storage.contract.managers.PackageMetadataManager;
 import com.emteria.storage.contract.models.AppPackage;
+import com.emteria.storage.contract.models.FileDescriptorWrapper;
 import com.emteria.storage.contract.models.RegistrationDetails;
 import com.emteria.storage.contract.models.RemoteFile;
-import com.emteria.storage.contract.utils.ParcelFileUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,24 +51,50 @@ public class MainActivity extends AppCompatActivity
 {
     private static final String TAG = "Emteria Storage SDK Sample";
 
+    private final HashMap<String, RemoteFile> mAvailableFiles = new HashMap<>();
     private final HashMap<String, AppPackage> mAvailablePackages = new HashMap<>();
     private final List<AppPackage> mDownloadedPackages = new ArrayList<>();
+
+    /**
+     * Messenger for sending requests to the remote service.
+     */
+    private Messenger mRequestMessenger;
+
+    /**
+     * Messenger for receiving callback messages.
+     */
+    private Messenger mResponseMessenger;
 
     private PackageHandler mPackageHandler;
     private DownloadHandler mDownloadHandler;
     private InstallHandler mInstallHandler;
     private RegistrationHandler mRegistrationHandler;
-    private UploadHandler mUploadHandler;
-    private FileListHandler mFileListHandler;
-    private FileDownloadHandler mFileDownloadHandler;
-
-    private final HashMap<String, RemoteFile> mAvailableFiles = new HashMap<>();
 
     private ScrollView mScrollView = null;
     private LinearLayout mResultsLayout = null;
 
+    private boolean mBound = false;
     private int mDownloadCounter = 0;
     private int mInstallCounter = 0;
+
+    private final ServiceConnection mFileServiceConnection = new ServiceConnection()
+    {
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder binder)
+        {
+            Log.i(TAG, "File service connected");
+            mBound = true;
+            mRequestMessenger = new Messenger(binder);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0)
+        {
+            Log.i(TAG, "File service disconnected");
+            mBound = false;
+            mRequestMessenger = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -79,9 +109,6 @@ public class MainActivity extends AppCompatActivity
         mInstallHandler = new InstallHandler();
         mDownloadHandler = new DownloadHandler();
         mRegistrationHandler = new RegistrationHandler();
-        mUploadHandler = new UploadHandler();
-        mFileListHandler = new FileListHandler();
-        mFileDownloadHandler = new FileDownloadHandler();
 
         Button getFdroidPackages = findViewById(R.id.getPackages);
         getFdroidPackages.setOnClickListener(v ->
@@ -229,47 +256,223 @@ public class MainActivity extends AppCompatActivity
             task.execute(mRegistrationHandler);
         });
 
-        Button uploadFile = findViewById(R.id.uploadFile);
-        uploadFile.setOnClickListener(v ->
+        mResponseMessenger = new Messenger(new CallbackHandler());
+        bindFileService();
+    }
+
+    private void bindFileService()
+    {
+        Log.d(TAG, "bindUpdateService()");
+        if (!mBound)
+        {
+            Intent bindIntent = MessengerConfig.getAppManagementServiceBindIntent();
+            boolean bindResult = bindService(bindIntent, mFileServiceConnection, Context.BIND_AUTO_CREATE);
+            Log.i(TAG, "Service bind result: " + bindResult);
+        }
+    }
+
+    private void unbindFileService()
+    {
+        Log.d(TAG, "unbindUpdateService()");
+        if (mBound)
+        {
+            unbindService(mFileServiceConnection);
+            mBound = false;
+            mRequestMessenger = null;
+        }
+    }
+
+    private void showTextResult(String text)
+    {
+        runOnUiThread(() ->
+        {
+            TextView view = new TextView(getApplicationContext());
+            view.setText(text);
+
+            mResultsLayout.removeAllViews();
+            mResultsLayout.addView(view);
+
+            mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
+        });
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        Log.i(TAG, "onDestroy()");
+        super.onDestroy();
+        unbindFileService();
+    }
+
+    public void onFileListingClick(View v)
+    {
+        mResultsLayout.removeAllViews();
+
+        if (!mBound)
+        {
+            showTextResult("Service is not bound");
+            return;
+        }
+
+        Thread runner = new Thread(this::onFileListingStart);
+        runner.start();
+    }
+
+    private void onFileListingStart()
+    {
+        try
+        {
+            Message requestMessage = FileListContract.ListRequest.buildMessage(mResponseMessenger);
+            mRequestMessenger.send(requestMessage);
+        }
+        catch (Exception e)
+        {
+            String message = e.getMessage();
+            showTextResult("Listing files failed: " + message);
+        }
+    }
+
+    public void onFilesListingReceived(List<RemoteFile> files)
+    {
+        runOnUiThread(() ->
         {
             mResultsLayout.removeAllViews();
+            mAvailableFiles.clear();
 
-            EditText filePathEdit = findViewById(R.id.filePath);
-            if (filePathEdit.getText().toString().isEmpty())
+            if (files == null || files.isEmpty())
             {
-                Toast.makeText(this, "File path is required", Toast.LENGTH_SHORT).show();
-                return;
+                TextView text = new TextView(getApplicationContext());
+                text.setText("No files available");
+                mResultsLayout.addView(text);
+            }
+            else
+            {
+                for (RemoteFile file : files)
+                {
+                    mAvailableFiles.put(file.getStorageFileId(), file);
+
+                    String data = "file name=" + file.getFilename() + "  id=" + file.getStorageFileId() + "  size=" + file.getSize();
+                    Log.i(TAG, data);
+
+                    TextView text = new TextView(getApplicationContext());
+                    text.setText(data);
+
+                    mResultsLayout.addView(text);
+                }
             }
 
-            FileUploadTask task = new FileUploadTask(getApplicationContext(), mUploadHandler, filePathEdit.getText().toString());
-            task.execute();
+            mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
         });
+    }
 
-        Button listFiles = findViewById(R.id.listFiles);
-        listFiles.setOnClickListener(v ->
+    public void onFileDownloadClick(View v)
+    {
+        mResultsLayout.removeAllViews();
+
+        if (!mBound)
         {
-            mResultsLayout.removeAllViews();
+            showTextResult("Service is not bound");
+            return;
+        }
 
-            FileListingTask task = new FileListingTask(getApplicationContext());
-            task.execute(mFileListHandler);
-        });
-
-        Button downloadFile = findViewById(R.id.downloadFile);
-        downloadFile.setOnClickListener(v ->
+        EditText storageFileIdEdit = findViewById(R.id.storageFileId);
+        String storageFileId = storageFileIdEdit.getText().toString().trim();
+        if (storageFileId.isEmpty())
         {
-            EditText storageFileIdEdit = findViewById(R.id.storageFileId);
-            String storageFileId = storageFileIdEdit.getText().toString().trim();
-            if (storageFileId.isEmpty())
+            showTextResult("Storage file ID required");
+            return;
+        }
+
+        Thread runner = new Thread(() -> onFileDownloadStart(storageFileId));
+        runner.start();
+    }
+
+    private void onFileDownloadStart(String storageFileId)
+    {
+        try
+        {
+            Message requestMessage = FileDownloadContract.DownloadRequest.buildMessage(mResponseMessenger, storageFileId);
+            mRequestMessenger.send(requestMessage);
+        }
+        catch (Exception e)
+        {
+            String message = e.getMessage();
+            showTextResult("Download failed: " + message);
+        }
+    }
+
+    public void onFileDownloadFinished(String storageFileId, ParcelFileDescriptor pfd)
+    {
+        // consume the descriptor off the main thread, then delete the local copy immediately
+        new Thread(() ->
+        {
+            String localFilename = storageFileId.replaceAll("[^A-Za-z0-9._-]", "_");
+            File destination = new File(getCacheDir(), "received-" + localFilename);
+
+            try
             {
-                Toast.makeText(this, "Storage file id is required", Toast.LENGTH_SHORT).show();
-                return;
+                long bytes = FileDescriptorWrapper.copyToFile(pfd, destination);
+                String md5 = HashUtils.computeMd5(destination);
+                showTextResult("Download successful for file with id=" + storageFileId + " bytes=" + bytes + " md5=" + md5);
             }
+            catch (Exception e)
+            {
+                showTextResult("Failed consuming file for id=" + storageFileId + ": " + e.getMessage());
+            }
+            finally
+            {
+                if (destination.exists() && destination.delete())
+                {
+                    Log.d(TAG, "Deleted local copy of " + storageFileId);
+                }
+            }
+        }).start();
+    }
 
-            mResultsLayout.removeAllViews();
+    public void onFileUploadClick(View v)
+    {
+        mResultsLayout.removeAllViews();
 
-            FileRetrievalTask task = new FileRetrievalTask(getApplicationContext(), storageFileId);
-            task.execute(mFileDownloadHandler);
-        });
+        if (!mBound)
+        {
+            showTextResult("Service is not bound");
+            return;
+        }
+
+        EditText filePathEdit = findViewById(R.id.filePath);
+        String filePathValue = filePathEdit.getText().toString().trim();
+        if (filePathValue.isEmpty())
+        {
+            showTextResult("File path is required");
+            return;
+        }
+
+        Thread runner = new Thread(() -> onFileUploadStart(filePathValue));
+        runner.start();
+    }
+
+    private void onFileUploadStart(String filepath)
+    {
+        try
+        {
+            File file = new File(filepath);
+            String filename = file.getName();
+            Log.i(TAG, "Sending file " + filename + " from " + file.getAbsolutePath());
+
+            boolean exists = file.exists();
+            boolean readable = file.canRead();
+            boolean writable = file.canWrite();
+            Log.i(TAG, "File exists: " + exists + ", readable: " + readable + ", writeable: " + writable);
+
+            ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+            Message requestMessage = FileUploadContract.UploadRequest.buildMessage(mResponseMessenger, filepath, pfd);
+            mRequestMessenger.send(requestMessage);
+        }
+        catch (Exception e)
+        {
+            String message = e.getMessage();
+            showTextResult("Upload failed: " + message);
+        }
     }
 
     private class PackageHandler extends PackageMetadataManager
@@ -536,157 +739,70 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private class UploadHandler extends FileUploadManager
+    private class CallbackHandler extends Handler
     {
         @Override
-        public void onUploadSuccess()
+        public void handleMessage(Message msg)
         {
-            Runnable updateUi = () ->
+            MessengerConfig.ResponseReason[] values = MessengerConfig.ResponseReason.values();
+
+            int index = msg.what;
+            if (index < 0 || index >= values.length)
             {
-                TextView text = new TextView(getApplicationContext());
-                text.setText("File upload successful");
+                Log.e(TAG, "Handler received unknown message. Message processing aborted.");
+                return;
+            }
 
-                mResultsLayout.removeAllViews();
-                mResultsLayout.addView(text);
-                mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
-            };
+            MessengerConfig.ResponseReason reason = values[index];
+            Bundle payload = msg.getData();
+            Log.i(TAG, "Received message " + reason);
 
-            runOnUiThread(updateUi);
-            unbind(getApplicationContext());
-        }
-
-        @Override
-        public void onUploadError(String s)
-        {
-            Runnable updateUi = () ->
+            try
             {
-                TextView text = new TextView(getApplicationContext());
-                text.setText("File upload failed: " + s);
+                switch (reason)
+                {
+                    case LIST_FILES_SUCCESS:
+                        ArrayList<RemoteFile> listFilesResult = FileListContract.ListSuccessResponse.extractFiles(payload);
+                        onFilesListingReceived(listFilesResult);
+                        break;
 
-                mResultsLayout.removeAllViews();
-                mResultsLayout.addView(text);
-                mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
-            };
+                    case LIST_FILES_ERROR:
+                        String listFilesError = FileListContract.ListErrorResponse.extractErrorMessage(payload);
+                        showTextResult("File listing failed: " + listFilesError);
+                        break;
 
-            runOnUiThread(updateUi);
-            unbind(getApplicationContext());
-        }
-    }
+                    case DOWNLOAD_FILE_SUCCESS:
+                        String downloadSuccessFileId = FileDownloadContract.DownloadSuccessResponse.extractStorageFileId(payload);
+                        ParcelFileDescriptor downloadSuccessPfd = FileDownloadContract.DownloadSuccessResponse.extractFileDescriptor(payload);
+                        onFileDownloadFinished(downloadSuccessFileId, downloadSuccessPfd);
+                        break;
 
-    private class FileListHandler extends FileListManager
-    {
-        @Override
-        public void onFilesReceived(List<RemoteFile> files)
-        {
-            runOnUiThread(() ->
+                    case DOWNLOAD_FILE_ERROR:
+                        String downloadFileId = FileDownloadContract.DownloadErrorResponse.extractStorageFileId(payload);
+                        String downloadFileError = FileListContract.ListErrorResponse.extractErrorMessage(payload);
+                        showTextResult("File " + downloadFileId + " download failed: " + downloadFileError);
+                        break;
+
+                    case UPLOAD_FILE_SUCCESS:
+                        showTextResult("File upload successful");
+                        break;
+
+                    case UPLOAD_FILE_ERROR:
+                        String uploadFileError = FileUploadContract.UploadErrorResponse.extractErrorMessage(payload);
+                        showTextResult("File upload failed: " + uploadFileError);
+                        break;
+
+                    default:
+                        showTextResult("Unknown message " + reason.name());
+                        Log.e(TAG, "Unknown message");
+                        break;
+                }
+            }
+            catch (Exception e)
             {
-                mResultsLayout.removeAllViews();
-                mAvailableFiles.clear();
-
-                if (files == null || files.isEmpty())
-                {
-                    TextView text = new TextView(getApplicationContext());
-                    text.setText("No files available");
-                    mResultsLayout.addView(text);
-                }
-                else
-                {
-                    for (RemoteFile file : files)
-                    {
-                        mAvailableFiles.put(file.getStorageFileId(), file);
-
-                        TextView text = new TextView(getApplicationContext());
-                        text.setText(file.getFilename() + "\n  id=" + file.getStorageFileId() + "  size=" + file.getSize());
-                        mResultsLayout.addView(text);
-                    }
-                }
-
-                mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
-            });
-
-            unbind(getApplicationContext());
-        }
-
-        @Override
-        public void onListError(String error)
-        {
-            runOnUiThread(() -> showResult("File listing failed: " + error));
-            unbind(getApplicationContext());
-        }
-    }
-
-    private class FileDownloadHandler extends FileDownloadManager
-    {
-        @Override
-        public void onFileReceived(String storageFileId, ParcelFileDescriptor pfd)
-        {
-            // consume the descriptor off the main thread, then delete the local copy immediately
-            new Thread(() ->
-            {
-                String message;
-                File destination = new File(getCacheDir(), "received-" + storageFileId.replaceAll("[^A-Za-z0-9._-]", "_"));
-                try
-                {
-                    long bytes = ParcelFileUtils.copyToFile(pfd, destination);
-                    String md5 = computeMd5(destination);
-                    message = "Download successful for id=" + storageFileId + "\n  bytes=" + bytes + "\n  md5=" + md5;
-                }
-                catch (Exception e)
-                {
-                    message = "Failed consuming file for id=" + storageFileId + ": " + e.getMessage();
-                }
-                finally
-                {
-                    if (destination.exists() && destination.delete())
-                    {
-                        Log.d(TAG, "Deleted local copy of " + storageFileId);
-                    }
-                }
-
-                final String result = message;
-                runOnUiThread(() -> showResult(result));
-                unbind(getApplicationContext());
-            }).start();
-        }
-
-        @Override
-        public void onDownloadError(String storageFileId, String error)
-        {
-            runOnUiThread(() -> showResult("Download failed for id=" + storageFileId + ": " + error));
-            unbind(getApplicationContext());
-        }
-    }
-
-    private void showResult(String text)
-    {
-        mResultsLayout.removeAllViews();
-
-        TextView view = new TextView(getApplicationContext());
-        view.setText(text);
-        mResultsLayout.addView(view);
-
-        mScrollView.post(() -> mScrollView.fullScroll(TextView.FOCUS_DOWN));
-    }
-
-    private String computeMd5(File file) throws IOException, NoSuchAlgorithmException
-    {
-        MessageDigest digest = MessageDigest.getInstance("MD5");
-        try (FileInputStream input = new FileInputStream(file))
-        {
-            byte[] buffer = new byte[8192];
-            int read;
-            while ((read = input.read(buffer)) != -1)
-            {
-                digest.update(buffer, 0, read);
+                Log.e(TAG, "Invalid message payload " + e.getMessage());
+                showTextResult("Runtime error " + e.getMessage());
             }
         }
-
-        StringBuilder builder = new StringBuilder();
-        for (byte b : digest.digest())
-        {
-            builder.append(String.format("%02x", b));
-        }
-
-        return builder.toString();
     }
 }
