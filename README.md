@@ -1,414 +1,242 @@
-# Storage (Custom API)
+# Emteria Storage SDK Sample
 
-The storage access can be controlled by third-party applications by using the following API methods from Emteria Storage SDK:
+An Android app showing how to use the **emteria Storage SDK** to manage
+application packages, transfer files, and register a device from a third-party
+app. It talks to the storage services that ship with emteria OS and demonstrates
+every capability the SDK exposes.
 
-- Retrieve information about available application packages
-- Invoke download of the chosen application in the background
-- Invoke a silent installation of the chosen application in the background
+## What this sample demonstrates
 
-## Retrieving a list of application packages
+- **App packages** — list available/installed packages, download one in the
+  background, and silently install it.
+- **File storage** — list remote files, download a file, and upload a file.
+- **Device registration** — register the device with a universal license, query
+  registration status, and read registration details.
 
-Third-party applications can retrieve a combined list of available and installed packages by inheriting from the following class and providing an implementation for its abstract methods:
+The logic lives in
+[`MainActivity.java`](app/src/main/java/com/emteria/sample/sdk/storage/MainActivity.java)
+and the small `tasks/` helpers that drive each SDK manager off the UI thread.
+
+## Prerequisites & compatibility
+
+- **Runs only on emteria OS.** The sample binds to the storage services
+  (`com.emteria.storage`), which are part of emteria OS. On stock Android / AOSP
+  the binds fail and the operations do nothing.
+- **Requires two emteria permissions** (both enforced by the storage services —
+  see [Setup](#integrating-the-sdk-in-your-own-app)).
+- **S3 / workspace operations require an activated device.** Listing workspace
+  packages, files, and uploads authenticate via a device JWT, so the device must
+  be registered/activated first.
+- Build targets: `compileSdk 34`, `targetSdk 34`, `minSdk 26`.
+- Bundled SDK: `app/src/main/libs/emteria-storage-sdk-v3.jar`.
+
+## Integrating the SDK in your own app
+
+1. Copy the SDK `.jar` from `app/src/main/libs` into your project.
+2. Add the JAR to your module's `build.gradle.kts`:
+
+   ```kotlin
+   implementation(fileTree("src/main/libs") { include("*.jar") })
+   ```
+
+3. Declare service visibility and the required permissions in
+   `AndroidManifest.xml`:
+
+   ```xml
+   <queries>
+       <package android:name="com.emteria.storage" />
+   </queries>
+
+   <uses-permission android:name="emteria.permission.MANAGE_APP_UPDATES" />
+   <uses-permission android:name="emteria.permission.MANAGE_DEVICE_REGISTRATION" />
+   ```
+
+   `MANAGE_APP_UPDATES` guards the app-package and file services;
+   `MANAGE_DEVICE_REGISTRATION` guards the device-registration service. Both are
+   enforced, so a caller without them cannot bind.
+
+## Two API styles
+
+The SDK is built on Android's bound-service **Messenger** IPC and exposes two
+services, each with its own bind intent:
+
+- `MessengerConfig.getAppManagementServiceBindIntent()` — app packages and files.
+- `MessengerConfig.getDeviceManagementServiceBindIntent()` — device registration.
+
+On top of that IPC there are two ways to call it:
+
+- **Manager classes** (high level) — for app packages and device registration.
+  You subclass an abstract `*Manager`, implement its callbacks, call
+  `bindToAppManagement(context)` or `bindToDeviceManagement(context)`, invoke a
+  request method, and receive results in your callbacks. Call `unbind(context)`
+  when done. Every operation is asynchronous.
+- **Contracts + Messenger** (low level) — for file operations. You bind the
+  app-management service yourself, build a request with a `*Contract` class
+  (attaching your reply `Messenger`), `send()` it, and dispatch the reply in a
+  `Handler` by switching on `MessengerConfig.ResponseReason`.
+
+The sample uses managers for packages/registration and the contract style for
+files.
+
+## App package management (managers)
+
+### List packages — `PackageMetadataManager`
 
 ```java
-public abstract class PackageListManager
-{
-    /**
-     * Callback that must be implemented to receive available packages.
-     *
-     * @param packages a HashMap where
-     *  - the key is the android package name
-     *  - the value is a list of corresponding AppPackage(s)
-     */
-    public abstract void onReceive(HashMap<String, List<AppPackage>> packages);
-
-    /**
-     * 
-     * Callback that must be implemented to receive errors when trying to get available packages
-     * @param error The error message
-     */
-    public abstract void onFailure(String error);
+class Handler extends PackageMetadataManager {
+    @Override public void onReceive(HashMap<String, List<AppPackage>> packages) { /* ... */ }
+    @Override public void onFailure(String error) { /* ... */ }
 }
+
+Handler h = new Handler();
+h.bindToAppManagement(context);
+h.getPackagesFromFDroid(repoName);   // packages from a hosted F-Droid repo
+// or
+h.getPackagesFromWorkspace();        // packages from the emteria workspace (S3, needs activation)
 ```
 
-Use the following methods to connect to the external service and retrieve the list of application packages:
-then the following method needs to be called:
+`onReceive` delivers a map of Android package name → list of `AppPackage`
+(available and installed).
+
+### Download a package — `PackageDownloadManager`
 
 ```java
-    /**
-     * Establish the connection to the service.
-     */
-    public final boolean bind(Context context);
-
-    /**
-     * Start retrieving all available packages (installed on the device and downloadable)
-     *
-     * @param repoName the emteria hosted Fdroid repo name
-     * @throws ServiceNotBoundException if the storage service is not bound
-     */
-    public void getPackages(String repoName) throws ServiceNotBoundException;
-
-    /**
-     * Start retrieving of all available packages for emteria S3 storage (installed on the device and downloadable)
-     * the authentication will be done through jwt which requires an activated device
-     *
-     * @throws ServiceNotBoundException if the storage service is not bound
-     */
-    public void getPackages() throws ServiceNotBoundException
-
-    /**
-     * Terminate the connection to the service.
-     */
-    public final void unbind(Context context);
-```
-
-The `AppPackage` class provides information about the found application like the exact version string and used permissions:
-
-```java
-/**
- * Class that represents an Application that is or can be installed.
- */
-public class AppPackage implements Serializable
-{
-    /**
-     * If the file is stored on the Emteria S3 server it gets a unique id
-     */
-    @SerializedName("id")
-    @Expose
-    private String id = null;
-
-    public String getId() 
-    { 
-        return id;
-    }
-
-    /**
-     * Date when the AppPackage was added to the storage entity.
-     */
-    @SerializedName("added")
-    @Expose
-    private Long added = 0L;
-
-    public Long getAdded()
-    {
-        return added;
-    }
-
-    /**
-     * Name of the .apk file.
-     */
-    @SerializedName("apkName")
-    @Expose
-    private String apkName = null;
-
-    public String getApkName()
-    {
-        return apkName;
-    }
-
-    /**
-     * Hash value of the .apk file.
-     */
-    @SerializedName("hash")
-    @Expose
-    private String hash = null;
-
-    public String getHash()
-    {
-        return hash;
-    }
-
-    /**
-     * Type of the {@link #hash} value eg. sha256.
-     */
-    @SerializedName("hashType")
-    @Expose
-    private String hashType = null;
-
-    public String getHashType()
-    {
-        return hashType;
-    }
-
-    /**
-     * Minimal SDK Version required for this package.
-     */
-    @SerializedName("minSdkVersion")
-    @Expose
-    private int minSdkVersion  = -1;
-
-    public int getMinSdkVersion()
-    {
-        return minSdkVersion;
-    }
-
-    /**
-     * List of supported instruction sets eg. arm64-v8a, armeabi-v7a, x86, x86_64.
-     */
-    @SerializedName("nativecode")
-    @Expose
-    private List<String> nativeCode = null;
-
-    public List<String> getNativeCode()
-    {
-        return nativeCode;
-    }
-
-    /**
-     * The name of the package eg com.emteria.storage.
-     */
-    @SerializedName("packageName")
-    @Expose
-    private String packageName  = null;
-
-    public String getPackageName()
-    {
-        return packageName;
-    }
-
-    /**
-     * The signature of the package can be found as "Signer #1 certificate SHA-256 digest" from the output of the "apksigner verify --print-certs apk" command.
-     */
-    @SerializedName("signer")
-    @Expose
-    private String signer  = null;
-
-    public String getSigner()
-    {
-        return signer;
-    }
-
-    /**
-     * Size of the .apk file.
-     */
-    @SerializedName("size")
-    @Expose
-    private int size  = -1;
-
-    public int getSize()
-    {
-        return size;
-    }
-
-    /**
-     * The target sdk version of this package.
-     */
-    @SerializedName("targetSdkVersion")
-    @Expose
-    private int targetSdkVersion  = -1;
-
-    public int getTargetSdkVersion()
-    {
-        return targetSdkVersion;
-    }
-
-    /**
-     * List of required permissions first string is the permission and second string represents the sdk version.
-     */
-    @SerializedName("uses-permission")
-    @Expose
-    private List<List<String>> usedPermissions  = null;
-
-    public List<List<String>> getUsedPermissions()
-    {
-        return usedPermissions;
-    }
-
-    /**
-     * Integer version code.
-     */
-    @SerializedName("versionCode")
-    @Expose
-    private int versionCode  = -1;
-
-    public int getVersionCode()
-    {
-        return versionCode;
-    }
-
-    /**
-     * Version name to display.
-     */
-    @SerializedName("versionName")
-    @Expose
-    private String versionName  = null;
-
-    public String getVersionName()
-    {
-        return versionName;
-    }
-
-    /**
-     * Indicates if a package is installed on the system.
-     */
-    private boolean isInstalled = false;
-
-    public boolean isInstalled()
-    {
-        return isInstalled;
-    }
-
-    /**
-     * Path where the .apk file is downloaded. null for not downloaded .apk files.
-     */
-    private String localDownloadPath = null;
-
-    public String getLocalDownloadPath()
-    {
-        return localDownloadPath;
-    }
-
-    /**
-     * Contains auto- and user-generated metadata
-     */
-    private List<Tag> userdata = null;
-
-    public List<Tag> getUserdata()
-    {
-        return userdata;
-    }
-
-    /**
-     * Specify the repo name where the file comes from
-     */
-    private String repoName = null;
-
-    public String getRepoName()
-    {
-        return repoName;
-    }
+class Handler extends PackageDownloadManager {
+    @Override public void onDownloadFinished(AppPackage appPackage) { /* ... */ }
+    @Override public void onDownloadFailed(String appPackageId, String error) { /* ... */ }
+    @Override public void onProgressChanged(String appPackageId, int progress) { /* ... */ }
 }
+
+h.bindToAppManagement(context);
+h.downloadPackage(appPackage.getAppId());   // download by app id
 ```
 
-The AppPackage class has a field userdata represented by a list of Tags. 
-A Tag is defined here:  
+### Install a package — `PackageInstallationManager`
 
 ```java
-public static class Tag implements Serializable
-{
-    private String key = null;
-   
-    public String getKey()
-    {
-        return key;
-    }
-
-    private String type = null;
-
-    public String getType()
-    {
-        return type;
-    }
-
-    private String value = null;
-
-    public String getValue()
-    {
-        return value;
-    }
-
+class Handler extends PackageInstallationManager {
+    @Override public void onInstallSuccessful(AppPackage appPackage) { /* ... */ }
+    @Override public void onInstallFailed(String appPackageId, String error) { /* ... */ }
 }
-``` 
 
-## Invoking application download
+h.bindToAppManagement(context);
+h.installPackage(appPackage.getAppId());    // install a previously downloaded package
+```
 
-Applications can be downloaded in the background without interfering with the normal OS operation. To invoke the download of a specific application package, third-party applications must provide an implementation inheriting the following class:
+## Device registration (manager)
+
+### `DeviceRegistrationManager`
 
 ```java
-public abstract class PackageDownloadManager
-{
-    /**
-     * Establish the connection to the service.
-     */
-    public final boolean bind(Context context);
-
-  /**
-   * Starts the download request of a given AppPackage
-   *
-   * @param appPackage the Package to download
-   * @throws ServiceNotBoundException if the StorageService is not bound before calling
-   */
-   public void downloadPackage(AppPackage appPackage) throws ServiceNotBoundException
-
-    /**
-     * Terminate the connection to the service.
-     */
-    public final void unbind(Context context);
+class Handler extends DeviceRegistrationManager {
+    @Override public void onRegistrationSuccess() { /* ... */ }
+    @Override public void onRegistrationFailure(String error) { /* ... */ }
+    @Override public void onRegistrationStatus(boolean registered) { /* ... */ }
+    @Override public void onRegistrationDetailsSuccess(RegistrationDetails details) { /* ... */ }
+    @Override public void onRegistrationDetailsFailure(String error) { /* ... */ }
 }
+
+Handler h = new Handler();
+h.bindToDeviceManagement(context);
+
+h.registerDevice(universalLicense);   // -> onRegistrationSuccess / onRegistrationFailure
+h.isDeviceRegistered();               // -> onRegistrationStatus(boolean)
+h.getRegistrationDetails(true);       // allowCache -> onRegistrationDetailsSuccess(RegistrationDetails)
 ```
 
-Implement the following methods to handle download results:
+## File storage (contracts + Messenger)
+
+Bind the app-management service, then send requests built with the file
+contracts and handle replies in your `Handler`.
 
 ```java
-/**
-  * Callback that must be implemented to receive the downloaded package
-  *
-  * @param appPackage The downloaded AppPackage
-  */
-public abstract void onDownloadFinished(AppPackage appPackage);
-
-/**
-  * Callback that must be implemented to react on failed downloads
-  *
-  * @param appPackage the AppPackage where the download failed
-  * @param error The Message why the installation failed
-  */
-public abstract void onDownloadFailed(AppPackage appPackage, String error);
-
-/**
-  * Callback that must be implemented to react on Progress changes
-  *
-  * @param appPackage the package where the progress changed
-  * @param progress value of the new progress value in %
-  */
-public abstract void onProgressChanged(AppPackage appPackage, int progress);
+Intent bind = MessengerConfig.getAppManagementServiceBindIntent();
+bindService(bind, connection, Context.BIND_AUTO_CREATE);
+// on connect: requestMessenger = new Messenger(binder);
+// responseMessenger = new Messenger(new CallbackHandler());
 ```
 
-## Starting app installation
+### List remote files
 
-After a successful download, applications can be silently installed on the device. Third-party applications must implement a class extending the following class:
+- **Request:** `FileListContract.ListRequest.buildMessage(responseMessenger)`
+- **Result:** `LIST_FILES_SUCCESS` →
+  `FileListContract.ListSuccessResponse.extractFiles(payload)` returns
+  `ArrayList<RemoteFile>`.
+- **Error:** `LIST_FILES_ERROR` → `FileListContract.ListErrorResponse.extractErrorMessage(payload)`.
 
-'''java
-public abstract class PackageInstallManager extends AbstractManager
-'''
+### Download a file
 
-The installation can be started by calling the following API method:
+- **Request:** `FileDownloadContract.DownloadRequest.buildMessage(responseMessenger, storageFileId)`
+- **Result:** `DOWNLOAD_FILE_SUCCESS` →
+  `FileDownloadContract.DownloadSuccessResponse.extractStorageFileId(payload)` and
+  `extractFileDescriptor(payload)` (a `ParcelFileDescriptor`). Consume it off the
+  main thread, e.g. with `FileDescriptorWrapper.copyToFile(pfd, destination)`.
+- **Error:** `DOWNLOAD_FILE_ERROR` → `extractStorageFileId` + error message.
 
-```java
-    /**
-     * Establish the connection to the service.
-     */
-    public final boolean bind(Context context);
+### Upload a file
 
-/**
-  * Start the installation of a given AppPackage
-  *
-  * @param appPackage The package to be installed
-  * @throws ServiceNotBoundException if the storage service is not bound
-  */
-public void installPackage(AppPackage appPackage) throws ServiceNotBoundException;
+- **Request:** `FileUploadContract.UploadRequest.buildMessage(responseMessenger, name, parcelFileDescriptor)`
+  where the descriptor is opened `MODE_READ_ONLY` on the local file.
+- **Result:** `UPLOAD_FILE_SUCCESS`.
+- **Error:** `UPLOAD_FILE_ERROR` → `FileUploadContract.UploadErrorResponse.extractErrorMessage(payload)`.
 
-    /**
-     * Terminate the connection to the service.
-     */
-    public final void unbind(Context context);
+## Data models
+
+- **`AppPackage`** — `getAppId()`, `getStorageId()`, `getApkName()`,
+  `getPackageName()`, `getVersionName()`, `getVersionCode()`, `getSize()`,
+  `getHash()`, `getHashType()`, `getSigner()`, `getMinSdkVersion()`,
+  `getTargetSdkVersion()`, `getNativeCode()`, `getUsedPermissions()`,
+  `getTags()` (`List<AppTag>`), `isInstalled()`, `getLocalDownloadPath()`,
+  `getRepoName()`, `getAdded()`.
+- **`RemoteFile`** — `getStorageFileId()`, `getFilename()`, `getContentType()`,
+  `getSize()`, `getCreatedDate()`, `getModifiedDate()`.
+- **`RegistrationDetails`** — `getDeviceId()`, `getDeviceName()`,
+  `getDeviceDescription()`, `getGroupId()`, `getGroupName()`,
+  `getGroupDescription()`.
+- **`FileDescriptorWrapper`** — helpers for the download descriptor:
+  `copyToFile(pfd, file)`, `openInputStream(pfd)`, `getPFD()`.
+
+## Response reasons (contract style)
+
+File and other low-level replies arrive as `MessengerConfig.ResponseReason`
+ordinals in `Message.what`:
+
+| Reason | Meaning |
+|---|---|
+| `LIST_FILES_SUCCESS` / `LIST_FILES_ERROR` | Remote file listing |
+| `DOWNLOAD_FILE_SUCCESS` / `DOWNLOAD_FILE_ERROR` | File download |
+| `UPLOAD_FILE_SUCCESS` / `UPLOAD_FILE_ERROR` | File upload |
+| `METADATA_FOUND` / `METADATA_ERROR` | Package listing |
+| `DOWNLOAD_PACKAGE_PROGRESS_CHANGED` / `DOWNLOAD_PACKAGE_SUCCESS` / `DOWNLOAD_PACKAGE_ERROR` | Package download |
+| `INSTALL_PACKAGE_SUCCESS` / `INSTALL_PACKAGE_ERROR` | Package install |
+| `DEVICE_REGISTRATION_SUCCESS` / `DEVICE_REGISTRATION_ERROR` / `DEVICE_REGISTRATION_STATUS` | Registration |
+| `DEVICE_REGISTRATION_DETAILS_SUCCESS` / `DEVICE_REGISTRATION_DETAILS_ERROR` | Registration details |
+
+When using the manager classes you don't handle these directly — the manager
+maps them to its callbacks for you.
+
+## Build & run
+
+```bash
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-To handle installation results the following methods need to be implemented:
+Launch the app on an emteria OS device. Note that workspace package listing,
+file operations, and uploads require the device to be registered/activated
+first — use the registration controls before those.
 
-```java
-/**
-  * Callback that must be implemented to get successful installation result
-  *
-  * @param appPackage the package that got installed
-  */
-public abstract void onInstallSuccessful(AppPackage appPackage);
+## Troubleshooting
 
-/**
-  * Callback that must be implemented to get notification about failed installation
-  *
-  * @param appPackage The package where the installation failed
-  * @param error The Message why the installation failed
-  */
-public abstract void onInstallFailed(AppPackage appPackage, String error);
-```
+- **"Service is not bound"** — the storage service could not be bound. Confirm
+  you are on an emteria OS device, the `<queries>` entry is present, and the app
+  holds the two permissions above.
+- **Workspace listing / file operations fail with an auth error** — the device
+  is not registered/activated; register it first.
+- **Permission denied on bind** — the app is missing `MANAGE_APP_UPDATES` or
+  `MANAGE_DEVICE_REGISTRATION`.
+
+## License
+
+See the repository for licensing information. For SDK questions, contact
+[emteria support](https://emteria.com).
